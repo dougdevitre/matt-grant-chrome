@@ -16,16 +16,18 @@ import type {
   Task,
 } from "./types.js";
 
-const DEFAULT_BASE = "http://localhost:8787";
-
 async function getToken(): Promise<string | null> {
   const { authToken } = await chrome.storage.local.get("authToken");
   return typeof authToken === "string" ? authToken : null;
 }
 
+// The backend base URL is configured at sign-in (persisted to chrome.storage by
+// signInDev / the Clerk flow). There is no hardcoded fallback so a production
+// build can never silently point at a developer's localhost.
 async function getBase(): Promise<string> {
   const { apiBase } = await chrome.storage.local.get("apiBase");
-  return typeof apiBase === "string" && apiBase ? apiBase : DEFAULT_BASE;
+  if (typeof apiBase === "string" && apiBase) return apiBase;
+  throw new Error("not_configured");
 }
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {

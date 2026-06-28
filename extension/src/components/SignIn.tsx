@@ -15,7 +15,7 @@ const ROLES: { value: Role; label: string }[] = [
 // Dev sign-in: exchanges a shared dev secret for a scoped token. In production
 // this screen is replaced by the Clerk sign-in flow (AUTH_DRIVER=clerk).
 export function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
-  const [base, setBase] = useState("http://localhost:8787");
+  const [base, setBase] = useState("");
   const [name, setName] = useState("");
   const [secret, setSecret] = useState("");
   const [role, setRole] = useState<Role>("registration_clerk");
@@ -51,7 +51,11 @@ export function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
       <div className="form">
         <label>
           Service URL
-          <input value={base} onChange={(e) => setBase(e.target.value)} />
+          <input
+            value={base}
+            onChange={(e) => setBase(e.target.value)}
+            placeholder="https://your-backend-domain"
+          />
         </label>
         <label>
           Your name

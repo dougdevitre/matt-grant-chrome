@@ -1,6 +1,6 @@
 {
   "name": "matt-grant-chrome",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Chrome extension + backend microservice for Matt Grant for Congress clerk productivity (MO-02, Aug 4 2026).",
   "license": "MIT",

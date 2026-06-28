@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Build output
+extension/dist/
+service/dist/
+
+# Packaged store upload artifacts
+*.zip
+
+# Secrets / local env
+.env
+.env.*
+!.env.example
+
+# Logs / OS cruft
+*.log
+.DS_Store
