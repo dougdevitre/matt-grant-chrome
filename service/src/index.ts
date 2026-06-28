@@ -1,6 +1,9 @@
 // matt-grant-chrome microservice entrypoint.
 // Stateless Express app. Deploy on Lambda+API Gateway, Fargate, or any Node host.
 
+// Load .env first so process.env is populated before config.ts reads it. dotenv
+// does not override real environment variables, so deployed env/SSM still wins.
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { ALLOWED_ORIGIN, PORT, assertSecureStartup } from "./config.js";
