@@ -44,17 +44,30 @@ top level (no extra parent folder).
 - [ ] Copy that URL — the dashboard requires it because the extension handles
       personal data.
 
-## 3. Capture screenshots (listing requires ≥ 1)
+## 3. Screenshots (listing requires ≥ 1)
 
-The UI lives in Chrome's side panel and needs a signed-in session, so capture from
-a real run:
+Five 1280×800 PNGs are already in **`store-assets/`** (sign-in, Local, Tasks,
+Schedule, Comms), captured from the real UI against a local seeded backend. They
+show the placeholder icons/copy and seeded demo data — good enough to submit, but
+re-shoot after dropping in the official logo and final committee name if you want
+those reflected.
 
-1. `chrome://extensions` → enable **Developer mode** → **Load unpacked** →
-   select `extension/dist/`.
-2. Click the extension's toolbar icon to open the side panel.
-3. Sign in (enter your backend Service URL, name, role, access code).
-4. Screenshot representative views (sign-in, Tasks queue, Schedule, Comms) at
-   **1280×800** or **640×400** (PNG/JPEG). 1–5 images recommended.
+**To regenerate** (after a UI change or rebrand):
+
+1. Run the backend locally with dev auth + the in-memory store:
+   `JWT_SECRET=dev-screenshot-secret DEV_AUTH_SECRET=dev-only-change-me \
+   AUTH_DRIVER=dev STORE_DRIVER=memory NODE_ENV=development npm run dev:service`
+2. `npm run build:extension`, then serve it:
+   `python3 -m http.server 5180 --directory extension/dist`
+3. Mint an admin token: `POST http://localhost:8787/auth/token` with
+   `{"devSecret":"dev-only-change-me","sub":"Jordan Vega","role":"admin"}`.
+4. Drive headless Chromium (binary at `/opt/pw-browsers/...` or your local
+   Chrome) against `http://localhost:5180/`, stubbing `chrome.storage.local`
+   with that token + `apiBase=http://localhost:8787`, and screenshot each tab at
+   1280×800.
+
+**Or capture manually:** `chrome://extensions` → Developer mode → Load unpacked
+`extension/dist/` → open the side panel → sign in → screenshot the views.
 
 ## 4. Developer dashboard
 

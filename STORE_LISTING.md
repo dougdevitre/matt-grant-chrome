@@ -101,8 +101,11 @@ scheduling, and compliant-messaging tasks.
 
 - **Store icon:** 128×128 PNG (use `extension/public/icons/icon-128.png`, or the
   final logo at that size).
-- **Screenshots:** at least one 1280×800 or 640×400 PNG/JPEG. See
-  `docs/CHROME_STORE_SUBMISSION.md` for how to capture the side panel.
+- **Screenshots:** five 1280×800 PNGs are pre-generated in `store-assets/`
+  (sign-in, Local, Tasks, Schedule, Comms), captured from the real UI against a
+  local seeded backend. Upload any/all; regenerate after a UI change per
+  `docs/CHROME_STORE_SUBMISSION.md`. Re-shoot once the official logo and final
+  copy are in place if you want them reflected.
 - **Small promo tile (optional):** 440×280 PNG.
 
 ---
