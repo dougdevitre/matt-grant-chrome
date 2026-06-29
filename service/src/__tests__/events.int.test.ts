@@ -1,0 +1,69 @@
+// Integration: shift claiming enforces capacity, blocks double-claims, and
+// honors optimistic version locking. The seeded drive is PHASE_1-only, so the
+// clock is pinned there to make its shifts visible.
+
+import request from "supertest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { app } from "../index.js";
+import { resetStoreForTests } from "../lib/store.js";
+import { TEST_JWT_SECRET, tokenFor, bearer } from "./helpers.js";
+
+const PHASE1 = new Date("2026-07-01T12:00:00Z");
+
+beforeAll(() => {
+  process.env.JWT_SECRET = TEST_JWT_SECRET;
+});
+
+beforeEach(() => {
+  resetStoreForTests();
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(PHASE1);
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+// The "Table captain" shift has capacity 2.
+async function tableCaptainShiftId(token: string): Promise<string> {
+  const res = await request(app).get("/events").set("Authorization", bearer(token));
+  expect(res.status).toBe(200);
+  const shift = res.body
+    .flatMap((e: { shifts: { id: string; role: string }[] }) => e.shifts)
+    .find((s: { role: string }) => s.role === "Table captain");
+  if (!shift) throw new Error("seed shift 'Table captain' not found");
+  return shift.id as string;
+}
+
+function claim(shiftId: string, sub: string, body: object = {}) {
+  return request(app)
+    .post(`/events/shifts/${shiftId}/claim`)
+    .set("Authorization", bearer(tokenFor("admin", sub)))
+    .send(body);
+}
+
+describe("shift claim", () => {
+  it("rejects claiming beyond capacity (409 full)", async () => {
+    const id = await tableCaptainShiftId(tokenFor("admin", "c1"));
+    expect((await claim(id, "c1")).status).toBe(200);
+    expect((await claim(id, "c2")).status).toBe(200);
+    const third = await claim(id, "c3");
+    expect(third.status).toBe(409);
+    expect(third.body.error).toBe("full");
+  });
+
+  it("rejects the same clerk claiming twice (409 already_claimed)", async () => {
+    const id = await tableCaptainShiftId(tokenFor("admin", "c1"));
+    expect((await claim(id, "c1")).status).toBe(200);
+    const again = await claim(id, "c1");
+    expect(again.status).toBe(409);
+    expect(again.body.error).toBe("already_claimed");
+  });
+
+  it("rejects a claim with a stale version (409 version_conflict)", async () => {
+    const id = await tableCaptainShiftId(tokenFor("admin", "c1"));
+    const res = await claim(id, "c1", { version: 999 });
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe("version_conflict");
+  });
+});
