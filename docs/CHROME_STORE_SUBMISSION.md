@@ -12,11 +12,11 @@ Companion files: `STORE_LISTING.md` (copy/paste listing text) and `PRIVACY.md`
       `NODE_ENV=production`, a strong `JWT_SECRET`, `AUTH_DRIVER=clerk`, and a
       pinned `ALLOWED_ORIGIN` (the extension origin). The service refuses to boot
       otherwise — see `README.md` → "Security model".
-- [ ] **Pin the backend domain in the manifest.** Edit
-      `extension/public/manifest.json` → `host_permissions`, replacing
-      `https://REPLACE-WITH-YOUR-BACKEND-DOMAIN/*` with your real **HTTPS** backend
-      host (e.g. `https://api.mattgrant.example/*`). This is the only manifest edit
-      needed; the API base is otherwise entered by the clerk at sign-in.
+- [ ] **Pin the manifest hosts.** Edit `extension/public/manifest.json` →
+      `host_permissions`, replacing the two placeholders with your real **HTTPS**
+      backend host and (for Clerk auth builds) your Clerk Frontend API host. If
+      shipping with real auth, also build in Clerk mode — see
+      `docs/PRODUCTION_AUTH.md`.
 - [ ] **Replace placeholder icons** in `extension/public/icons/` with the official
       logo at 16/32/48/128 (keep the same filenames). See that folder's README.
 - [ ] **Complete legal/compliance review** of the SMS/messaging feature (TCPA

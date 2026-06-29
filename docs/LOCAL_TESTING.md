@@ -76,3 +76,9 @@ Social, and Admin see **Comms**).
   packaging for the store.**
 - **Reset demo data**: restart `npm run dev:service` (the memory store re-seeds).
 - **Token expired** after an hour: just sign in again.
+
+## Testing against a live URL with real auth
+
+This guide covers local dev (dev sign-in). To test against a deployed
+HTTPS backend with real **Clerk** sign-in, see `docs/PRODUCTION_AUTH.md`
+(and `docs/DEPLOY.md` for standing up the backend).

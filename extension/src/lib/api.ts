@@ -21,10 +21,13 @@ async function getToken(): Promise<string | null> {
   return typeof authToken === "string" ? authToken : null;
 }
 
-// The backend base URL is configured at sign-in (persisted to chrome.storage by
-// signInDev / the Clerk flow). There is no hardcoded fallback so a production
-// build can never silently point at a developer's localhost.
+// The backend base URL comes from (1) the build-time VITE_API_BASE for
+// production builds, then (2) the apiBase persisted at sign-in. There is no
+// hardcoded fallback so a production build can never silently point at a
+// developer's localhost.
 async function getBase(): Promise<string> {
+  const envBase = import.meta.env.VITE_API_BASE;
+  if (envBase) return envBase;
   const { apiBase } = await chrome.storage.local.get("apiBase");
   if (typeof apiBase === "string" && apiBase) return apiBase;
   throw new Error("not_configured");
@@ -188,6 +191,56 @@ export async function stepUp(devSecret: string): Promise<string> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ devSecret, sub: authSub, role: authRole }),
+  });
+  if (!res.ok) {
+    const d = await res.json().catch(() => ({}));
+    throw new Error(d.error ?? `http_${res.status}`);
+  }
+  const data = (await res.json()) as { stepUpToken: string };
+  return data.stepUpToken;
+}
+
+/**
+ * Production sign-in: exchange a Clerk session token (obtained from the Clerk
+ * SDK's getToken({ template })) for the app's short-lived scoped token. The
+ * backend (AUTH_DRIVER=clerk) verifies the Clerk JWT against Clerk's JWKS and
+ * derives the role from the user's publicMetadata.role claim.
+ */
+export async function signInClerk(sessionToken: string): Promise<void> {
+  const base = await getBase();
+  const res = await fetch(`${base}/auth/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sessionToken }),
+  });
+  if (!res.ok) {
+    const d = await res.json().catch(() => ({}));
+    throw new Error(d.error ?? `http_${res.status}`);
+  }
+  const data = (await res.json()) as {
+    token: string;
+    expiresIn: number;
+    role: string;
+  };
+  await chrome.storage.local.set({
+    apiBase: base,
+    authToken: data.token,
+    tokenExpiresAt: Date.now() + data.expiresIn * 1000,
+    authRole: data.role,
+  });
+}
+
+/**
+ * Clerk step-up for a sensitive action (SMS): exchange a FRESH Clerk session
+ * token for an ephemeral step-up token (admin-only, server-side). Mirrors
+ * `stepUp` but for the Clerk auth mode.
+ */
+export async function stepUpClerk(sessionToken: string): Promise<string> {
+  const base = await getBase();
+  const res = await fetch(`${base}/auth/step-up`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sessionToken }),
   });
   if (!res.ok) {
     const d = await res.json().catch(() => ({}));

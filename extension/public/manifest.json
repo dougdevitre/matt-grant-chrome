@@ -18,8 +18,19 @@
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
   },
-  "background": { "service_worker": "background.js", "type": "module" },
-  "side_panel": { "default_path": "index.html" },
-  "permissions": ["sidePanel", "storage"],
-  "host_permissions": ["https://REPLACE-WITH-YOUR-BACKEND-DOMAIN/*"]
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "side_panel": {
+    "default_path": "index.html"
+  },
+  "permissions": [
+    "sidePanel",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://REPLACE-WITH-YOUR-BACKEND-DOMAIN/*",
+    "https://REPLACE-WITH-YOUR-CLERK-FRONTEND-API/*"
+  ]
 }

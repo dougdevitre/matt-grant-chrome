@@ -19,7 +19,7 @@ import { SignIn } from "./components/SignIn.js";
 
 type Tab = "local" | "tasks" | "schedule" | "import" | "comms";
 
-export default function App() {
+export default function App({ onSignOut }: { onSignOut?: () => Promise<void> } = {}) {
   const [me, setMe] = useState<ClerkIdentity | null>(null);
   const [phase, setPhase] = useState<PhaseConfig | null>(null);
   const [data, setData] = useState<ResolveResponse | null>(null);
@@ -66,6 +66,12 @@ export default function App() {
   }
 
   async function handleSignOut() {
+    if (onSignOut) {
+      // Clerk mode: ClerkRoot clears the app token and ends the Clerk session,
+      // then re-renders to the sign-in screen — no local state update needed.
+      await onSignOut();
+      return;
+    }
     await signOut();
     setMe(null);
     setData(null);

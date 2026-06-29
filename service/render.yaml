@@ -1,0 +1,30 @@
+# Render blueprint for the matt-grant-chrome backend.
+# Deploy: push to GitHub, then in Render → "New +" → "Blueprint" → pick this repo.
+# Set the env vars marked sync:false in the Render dashboard (they are secrets).
+services:
+  - type: web
+    name: matt-grant-service
+    runtime: node
+    plan: free
+    # Monorepo: build only the service workspace.
+    buildCommand: npm ci && npm run build --workspace service
+    startCommand: node service/dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: AUTH_DRIVER
+        value: clerk
+      - key: STORE_DRIVER
+        value: memory
+      - key: PORT
+        value: "8787"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CLERK_JWKS_URL
+        sync: false
+      - key: CLERK_ISSUER
+        sync: false
+      # Pin to your extension origin, e.g. chrome-extension://<id>
+      - key: ALLOWED_ORIGIN
+        sync: false
