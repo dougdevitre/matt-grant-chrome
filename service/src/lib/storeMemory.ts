@@ -196,14 +196,19 @@ export function makeMemoryStore(): StorePort {
     },
   };
 
-  seed(store);
+  seedReady = seed(store);
   return store;
 }
 
+// Resolves once the seed data has been written. `getStore()` awaits this so the
+// first request (and every test) sees a fully-seeded store rather than racing
+// the fire-and-forget seed.
+export let seedReady: Promise<void> = Promise.resolve();
+
 const ALL_PHASES: Phase[] = ["PHASE_1_REGISTER", "PHASE_2_PLAN", "PHASE_3_TURNOUT"];
 
-function seed(store: StorePort): void {
-  void (async () => {
+async function seed(store: StorePort): Promise<void> {
+  {
     await store.createTask({
       kind: "register_contact",
       title: "Send registration link to 12 contacts in 63031",
@@ -315,5 +320,5 @@ function seed(store: StorePort): void {
       contactKey: contactKeyFor("+13145550199"),
       source: "seed",
     });
-  })();
+  }
 }

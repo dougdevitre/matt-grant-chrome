@@ -1,0 +1,13 @@
+// Harness smoke test: proves the Express app can be imported without binding a
+// port (the main-module guard in index.ts) and driven via supertest.
+
+import request from "supertest";
+import { app } from "../index.js";
+
+describe("GET /health", () => {
+  it("returns ok without auth", async () => {
+    const res = await request(app).get("/health");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ ok: true });
+  });
+});
