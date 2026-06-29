@@ -38,12 +38,47 @@ fly deploy
 Use a Node 20 Dockerfile that runs `npm ci && npm run build --workspace service`
 and starts `node service/dist/index.js` (internal port 8787).
 
-## Option C — AWS (Lambda+API Gateway or Fargate)
+## Option C — AWS Lambda (SAM, recommended for AWS)
 
-Matches the SSM/IAM model already in the README: load secrets from SSM
-SecureString under `SSM_PREFIX` with least-privilege `ssm:GetParameter`. Wrap the
-Express app with `@codegenie/serverless-express` for Lambda, or containerize for
-Fargate. Front with HTTPS and pin `ALLOWED_ORIGIN`.
+The Express app is wrapped with `@codegenie/serverless-express` and runs on
+Lambda behind a **Function URL** (no API Gateway needed). `service/template.yaml`
+is a ready SAM template; secrets come from SSM at runtime.
+
+```bash
+cd service
+# 1. bundle the handler to a single ESM file (dist/lambda.mjs)
+npm run build:lambda          # from repo root: npm run build:lambda --workspace service
+
+# 2. create the SSM params once (see "Set up Parameter Store" below)
+
+# 3. deploy (region us-east-1). Provide overrides when prompted, or inline:
+sam deploy --guided \
+  --region us-east-1 \
+  --stack-name matt-grant-service \
+  --capabilities CAPABILITY_IAM \
+  --parameter-overrides \
+      NodeEnv=production \
+      AllowedOrigin=chrome-extension://<EXTENSION_ID> \
+      SsmPrefix=/matt-grant-chrome/production
+```
+
+The stack output **`FunctionUrl`** (e.g. `https://abc123.lambda-url.us-east-1.on.aws/`)
+is your backend URL → set it as `VITE_API_BASE` and add `<that-host>/*` to the
+manifest `host_permissions`, then rebuild the extension (`docs/PRODUCTION_AUTH.md`).
+
+**First-test shortcut:** if you don't have the extension ID yet, deploy with
+`NodeEnv=staging` and `AllowedOrigin=*` — Clerk auth stays enforced, but the
+production secure-boot gate (which forbids `ALLOWED_ORIGIN=*`) is relaxed. Switch
+to `NodeEnv=production` + the pinned origin once you have the ID.
+
+> The handler is verified locally: invoking `dist/lambda.mjs` with a Function URL
+> v2 event for `/health` returns `200 {"ok":true}`.
+
+### Fargate / containers (alternate)
+
+`node service/dist/index.js` runs the same app as a normal server (it only binds
+a port when **not** on Lambda). Containerize with a Node 20 image, set the env
+below, front with HTTPS, and pin `ALLOWED_ORIGIN`.
 
 ### Set up Parameter Store
 

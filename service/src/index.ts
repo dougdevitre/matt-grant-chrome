@@ -69,6 +69,13 @@ if (problems.length > 0) {
   process.exit(1);
 }
 
-app.listen(PORT, () => {
-  console.log(`matt-grant-chrome service listening on :${PORT}`);
-});
+// Only bind a port when running as a normal process (local dev, containers).
+// Under AWS Lambda the app is wrapped by src/lambda.ts instead, so importing
+// this module there must NOT open a listener.
+if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  app.listen(PORT, () => {
+    console.log(`matt-grant-chrome service listening on :${PORT}`);
+  });
+}
+
+export { app };

@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  matt-grant-chrome backend — the Express app on AWS Lambda behind a Function
+  URL. Secrets (CLERK_*, JWT_SECRET) are read from SSM Parameter Store at runtime
+  under SsmPrefix. Build the bundle first: npm run build:lambda --workspace service
+
+Parameters:
+  AllowedOrigin:
+    Type: String
+    Default: "*"
+    Description: >
+      CORS origin to allow — your extension origin, e.g. chrome-extension://<id>.
+      MUST NOT be "*" when NodeEnv=production (the app's secure-boot gate rejects it).
+  NodeEnv:
+    Type: String
+    Default: production
+    AllowedValues: [production, staging, development]
+    Description: >
+      production enforces the secure-boot gate (clerk auth + a pinned AllowedOrigin).
+      Use staging for a first smoke test if you don't have the extension ID yet.
+  SsmPrefix:
+    Type: String
+    Default: /matt-grant-chrome/production
+    Description: Prefix the service reads config/secrets from (${SsmPrefix}/CLERK_ISSUER, etc.)
+
+Resources:
+  Service:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: matt-grant-service
+      Runtime: nodejs20.x
+      Architectures: [arm64]
+      Handler: lambda.handler        # dist/lambda.mjs -> exported handler
+      CodeUri: dist/
+      MemorySize: 512
+      Timeout: 15
+      Environment:
+        Variables:
+          NODE_ENV: !Ref NodeEnv
+          AUTH_DRIVER: clerk
+          STORE_DRIVER: memory
+          SSM_PREFIX: !Ref SsmPrefix
+          ALLOWED_ORIGIN: !Ref AllowedOrigin
+      # No Cors block here on purpose — the Express app's cors() middleware owns
+      # CORS/preflight, keeping one source of truth.
+      FunctionUrlConfig:
+        AuthType: NONE
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+                - ssm:GetParametersByPath
+              Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/matt-grant-chrome/*"
+
+Outputs:
+  FunctionUrl:
+    Description: Backend base URL — use as VITE_API_BASE and in the manifest host_permissions
+    Value: !GetAtt ServiceUrl.FunctionUrl
