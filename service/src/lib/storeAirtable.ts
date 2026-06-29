@@ -5,8 +5,12 @@
 // JSON blob holding the full typed object — pragmatic and drift-resistant.
 //
 // Expected tables (create in the base): Tasks, Events, Shifts, Templates,
-// OptOut, Outbox, Audit. Each needs at least a `Data` long-text field; the
-// extra columns below are for human-readable filtering in the Airtable UI.
+// Contacts, ContactLogs, OptOut, Outbox, Audit. Each needs a `Data` long-text
+// field. Point reads use filterByFormula on these single-line-text columns, so
+// they must exist where used: `RecordId` (Tasks/Events/Shifts/Templates/Contacts),
+// `ContactKey` (Contacts/OptOut), `IdempotencyKey` (Outbox). The remaining columns
+// (Status, Zip, County, Category, RegStatus, Action, EventId) are for human-readable
+// filtering in the Airtable UI. See docs/airtable-setup.md.
 
 import { getConfig } from "../config.js";
 import type {
@@ -61,8 +65,31 @@ export async function makeAirtableStore(): Promise<StorePort> {
       },
       body: body ? JSON.stringify(body) : undefined,
     });
-    if (!res.ok) throw new Error(`airtable_${res.status}`);
+    if (!res.ok) {
+      // Surface the (PII-free) Airtable error body for debuggability; keep the
+      // airtable_<status> code prefix so callers can still match on it.
+      const detail = await res.text().catch(() => "");
+      throw new Error(`airtable_${res.status}${detail ? `: ${detail.slice(0, 300)}` : ""}`);
+    }
     return (await res.json()) as T;
+  }
+
+  // Point read: fetch a single record by an exact column match (server-side
+  // filterByFormula) and return its parsed Data blob. Avoids scanning the whole
+  // table for get-by-id / get-by-key lookups.
+  async function findOneByFormula<T>(
+    table: string,
+    column: string,
+    value: string
+  ): Promise<T | undefined> {
+    const safe = value.replace(/'/g, "\\'"); // escape quotes in the formula literal
+    const formula = encodeURIComponent(`{${column}}='${safe}'`);
+    const res = await req<{ records: AirtableRecord<T>[] }>(
+      "GET",
+      `${encodeURIComponent(table)}?filterByFormula=${formula}&maxRecords=1`
+    );
+    const rec = res.records[0];
+    return rec ? (JSON.parse(rec.fields.Data) as T) : undefined;
   }
 
   async function listAll<T>(table: string): Promise<T[]> {
@@ -124,7 +151,7 @@ export async function makeAirtableStore(): Promise<StorePort> {
       return listAll<Task>("Tasks");
     },
     async getTask(id) {
-      return (await listAll<Task>("Tasks")).find((t) => t.id === id);
+      return findOneByFormula<Task>("Tasks", "RecordId", id);
     },
     async putTask(task) {
       return upsert("Tasks", task, { Status: task.status, Zip: task.zip });
@@ -147,7 +174,7 @@ export async function makeAirtableStore(): Promise<StorePort> {
       return listAll<CampaignEvent>("Events");
     },
     async getEvent(id) {
-      return (await listAll<CampaignEvent>("Events")).find((e) => e.id === id);
+      return findOneByFormula<CampaignEvent>("Events", "RecordId", id);
     },
     async createEvent(input: NewEvent) {
       const e: CampaignEvent = { ...input, id: randomUUID(), createdAt: now() };
@@ -163,7 +190,7 @@ export async function makeAirtableStore(): Promise<StorePort> {
       );
     },
     async getShift(id) {
-      return (await listAll<Shift>("Shifts")).find((s) => s.id === id);
+      return findOneByFormula<Shift>("Shifts", "RecordId", id);
     },
     async putShift(shift) {
       return upsert("Shifts", shift, { EventId: shift.eventId });
@@ -177,7 +204,7 @@ export async function makeAirtableStore(): Promise<StorePort> {
       return listAll<MessageTemplate>("Templates");
     },
     async getTemplate(id) {
-      return (await listAll<MessageTemplate>("Templates")).find((t) => t.id === id);
+      return findOneByFormula<MessageTemplate>("Templates", "RecordId", id);
     },
     async createTemplate(input: NewTemplate) {
       const t: MessageTemplate = {
@@ -193,19 +220,26 @@ export async function makeAirtableStore(): Promise<StorePort> {
       return upsert("Templates", template, { Category: template.category });
     },
     async isOptedOut(contactKey) {
-      const all = await listAll<{ id: string; contactKey: string }>("OptOut");
-      return all.some((o) => o.contactKey === contactKey);
+      const found = await findOneByFormula<{ id: string; contactKey: string }>(
+        "OptOut",
+        "ContactKey",
+        contactKey
+      );
+      return !!found;
     },
     async addOptOut(contactKey) {
-      await create("OptOut", { id: randomUUID(), contactKey });
+      // Mirror the key into a queryable column so isOptedOut() is a point read.
+      await create("OptOut", { id: randomUUID(), contactKey }, { ContactKey: contactKey });
     },
     async getOutboxByKey(idempotencyKey) {
-      return (await listAll<OutboxEntry>("Outbox")).find(
-        (o) => o.idempotencyKey === idempotencyKey
-      );
+      return findOneByFormula<OutboxEntry>("Outbox", "IdempotencyKey", idempotencyKey);
     },
     async appendOutbox(entry) {
-      return create("Outbox", entry, { Status: entry.status });
+      // IdempotencyKey column makes the replay check a point read.
+      return create("Outbox", entry, {
+        Status: entry.status,
+        IdempotencyKey: entry.idempotencyKey,
+      });
     },
 
     async listContacts(filter: ContactFilter = {}) {
@@ -218,12 +252,10 @@ export async function makeAirtableStore(): Promise<StorePort> {
       });
     },
     async getContact(id) {
-      return (await listAll<Contact>("Contacts")).find((c) => c.id === id);
+      return findOneByFormula<Contact>("Contacts", "RecordId", id);
     },
     async findContactByKey(contactKey) {
-      return (await listAll<Contact>("Contacts")).find(
-        (c) => c.contactKey === contactKey
-      );
+      return findOneByFormula<Contact>("Contacts", "ContactKey", contactKey);
     },
     async createContact(input: NewContact) {
       const c: Contact = {

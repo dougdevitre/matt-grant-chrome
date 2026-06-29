@@ -10,6 +10,8 @@ const TOUCHED = [
   "AUTH_DRIVER",
   "ALLOWED_ORIGIN",
   "SMS_DRIVER",
+  "STORE_DRIVER",
+  "AIRTABLE_PAT",
   "SSM_PREFIX",
   "TWILIO_ACCOUNT_SID",
   "TWILIO_AUTH_TOKEN",
@@ -88,5 +90,13 @@ describe("assertSecureStartup", () => {
     ]) {
       expect(problems.some((p) => p.includes(k))).toBe(true);
     }
+  });
+
+  it("flags airtable store driver with a missing PAT", async () => {
+    const problems = await runStartup({ ...CLEAN, STORE_DRIVER: "airtable" });
+    expect(problems.some((p) => p.includes("AIRTABLE_PAT"))).toBe(true);
+    // ...and passes once the PAT is present.
+    const ok = await runStartup({ ...CLEAN, STORE_DRIVER: "airtable", AIRTABLE_PAT: "pat" });
+    expect(ok).toEqual([]);
   });
 });
