@@ -67,5 +67,10 @@ export async function assertSecureStartup(): Promise<string[]> {
       if (!(await getConfig(k))) problems.push(`SMS_DRIVER=twilio but ${k} is missing`);
     }
   }
+  if ((process.env.STORE_DRIVER ?? "memory") === "airtable") {
+    if (!(await getConfig("AIRTABLE_PAT"))) {
+      problems.push("STORE_DRIVER=airtable but AIRTABLE_PAT is missing");
+    }
+  }
   return problems;
 }

@@ -79,10 +79,21 @@ export interface ResourceCard {
   confidenceMin: Confidence;
 }
 
+// Optional public-data enrichment, attached only when ENRICH_RESOLVE=true.
+// Server-side; degrades to nulls/empty so it never blocks a resolve.
+export interface ResolveEnrichment {
+  demographics: {
+    population: number | null;
+    medianHouseholdIncome: number | null;
+  } | null;
+  venues: Array<{ name: string; lat: number; lng: number; kind: string }>;
+}
+
 export interface ResolveResponse {
   location: ResolvedLocation;
   phase: Phase;
   cards: ResourceCard[];
+  enrichment?: ResolveEnrichment;
 }
 
 // ---------------------------------------------------------------------------

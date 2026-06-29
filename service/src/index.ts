@@ -59,13 +59,23 @@ app.use(
   }
 );
 
-const problems = await assertSecureStartup();
-if (problems.length > 0) {
-  console.error("FATAL: insecure configuration, refusing to start:");
-  for (const p of problems) console.error("  - " + p);
-  process.exit(1);
-}
+// Exported so tests (supertest) can import the configured app without binding a
+// port. The boot guard + listen below only run when this file is the entrypoint.
+export { app };
 
-app.listen(PORT, () => {
-  console.log(`matt-grant-chrome service listening on :${PORT}`);
-});
+const isMain =
+  typeof process.argv[1] === "string" &&
+  import.meta.url === `file://${process.argv[1]}`;
+
+if (isMain) {
+  const problems = await assertSecureStartup();
+  if (problems.length > 0) {
+    console.error("FATAL: insecure configuration, refusing to start:");
+    for (const p of problems) console.error("  - " + p);
+    process.exit(1);
+  }
+
+  app.listen(PORT, () => {
+    console.log(`matt-grant-chrome service listening on :${PORT}`);
+  });
+}

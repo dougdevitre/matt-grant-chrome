@@ -157,7 +157,35 @@ v0.6 scaffold. **Live and smoke-tested:**
 - **Phase 3 — Comms:** template → approval → gated send, idempotent outbox, opaque keys.
 - **Phase 4 — LEA:** Board vs. County Clerk (St. Louis City ≠ St. Louis County).
 
-Still to do: live Clerk app + Airtable/Calendar/Gmail against real providers; the remaining public-data clients (FEC / ACS / DESE / OSM); deploy + CORS/secrets lockdown. The Census geocoder is coded but unverified against the live endpoint from this sandbox.
+Public-data clients (Census geocoder + ACS demographics, FEC race finance, OSM venues, DESE district profile) are implemented server-side with timeouts and graceful nulls, and covered by deterministic mocked-fetch tests (`service/src/__tests__/publicData.test.ts`). They were not live-verified from the build sandbox (egress is allowlist-restricted); ACS/OSM venue enrichment attaches to `/location/resolve` only when `ENRICH_RESOLVE=true`.
+
+Still to do: live Clerk app + Airtable/Calendar/Gmail against real providers (the Airtable adapter is hardened + tested — see `docs/airtable-setup.md` — pending live credentials); Calendar/Gmail still need service-account OAuth; deploy + CORS/secrets lockdown; and a live run of the public-data clients against real endpoints.
+
+## Tests & CI
+
+Automated coverage runs under **Vitest** as two projects — `service` (Node) and
+`extension` (jsdom + Testing Library).
+
+```bash
+npm test          # run the whole suite once
+npm run test:watch
+```
+
+The suite targets the high-risk production paths rather than chasing a coverage
+number:
+
+- **Service unit** — phase clock boundaries, RBAC scope derivation (SMS is
+  admin-only), step-up token mint/verify, Twilio signature validation, audit
+  hash-chain tamper detection, SMS kill switch / daily cap, and the
+  refuse-to-boot guard.
+- **Service integration** (supertest, app imported in-process) — auth/RBAC
+  rejection codes, optimistic-locking `409`s, the registration phase deadline,
+  shift capacity, the layered SMS send guard, and the signed Twilio STOP webhook.
+- **Extension** — the countdown formatter, role labels, scope-gated tab
+  rendering, and the sign-in form.
+
+`.github/workflows/ci.yml` runs `npm ci → typecheck → build → test` on every push
+and pull request.
 
 ## Compliance (educational, not legal advice)
 

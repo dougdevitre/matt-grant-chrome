@@ -101,8 +101,18 @@ export async function getStore(): Promise<StorePort> {
     const { makeAirtableStore } = await import("./storeAirtable.js");
     singleton = await makeAirtableStore();
   } else {
-    const { makeMemoryStore } = await import("./storeMemory.js");
-    singleton = makeMemoryStore();
+    const mod = await import("./storeMemory.js");
+    singleton = mod.makeMemoryStore();
+    // Seeding is async; await it so the first caller sees a fully-seeded store.
+    await mod.seedReady;
   }
   return singleton;
+}
+
+/**
+ * Test-only: drop the cached store so the next getStore() rebuilds a fresh,
+ * re-seeded in-memory store. Lets each test file start from a clean slate.
+ */
+export function resetStoreForTests(): void {
+  singleton = null;
 }
