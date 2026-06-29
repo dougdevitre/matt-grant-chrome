@@ -72,5 +72,22 @@ export async function assertSecureStartup(): Promise<string[]> {
       problems.push("STORE_DRIVER=airtable but AIRTABLE_PAT is missing");
     }
   }
+  // Google providers need either a service account or a legacy bearer token.
+  // (Checked inline rather than importing googleAuth to avoid an import cycle.)
+  const hasGoogleSa =
+    !!(await getConfig("GOOGLE_SA_JSON")) ||
+    (!!(await getConfig("GOOGLE_SA_CLIENT_EMAIL")) && !!(await getConfig("GOOGLE_SA_PRIVATE_KEY")));
+  if ((process.env.CALENDAR_DRIVER ?? "noop") === "google") {
+    if (!hasGoogleSa && !(await getConfig("GOOGLE_CALENDAR_TOKEN"))) {
+      problems.push(
+        "CALENDAR_DRIVER=google but no service account (GOOGLE_SA_*) or GOOGLE_CALENDAR_TOKEN"
+      );
+    }
+  }
+  if ((process.env.MAILER_DRIVER ?? "noop") === "gmail") {
+    if (!hasGoogleSa && !(await getConfig("GMAIL_TOKEN"))) {
+      problems.push("MAILER_DRIVER=gmail but no service account (GOOGLE_SA_*) or GMAIL_TOKEN");
+    }
+  }
   return problems;
 }

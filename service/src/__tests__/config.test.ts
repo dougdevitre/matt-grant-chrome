@@ -12,6 +12,13 @@ const TOUCHED = [
   "SMS_DRIVER",
   "STORE_DRIVER",
   "AIRTABLE_PAT",
+  "CALENDAR_DRIVER",
+  "MAILER_DRIVER",
+  "GOOGLE_SA_JSON",
+  "GOOGLE_SA_CLIENT_EMAIL",
+  "GOOGLE_SA_PRIVATE_KEY",
+  "GOOGLE_CALENDAR_TOKEN",
+  "GMAIL_TOKEN",
   "SSM_PREFIX",
   "TWILIO_ACCOUNT_SID",
   "TWILIO_AUTH_TOKEN",
@@ -97,6 +104,33 @@ describe("assertSecureStartup", () => {
     expect(problems.some((p) => p.includes("AIRTABLE_PAT"))).toBe(true);
     // ...and passes once the PAT is present.
     const ok = await runStartup({ ...CLEAN, STORE_DRIVER: "airtable", AIRTABLE_PAT: "pat" });
+    expect(ok).toEqual([]);
+  });
+
+  it("flags google calendar driver with no service account or token", async () => {
+    const problems = await runStartup({ ...CLEAN, CALENDAR_DRIVER: "google" });
+    expect(problems.some((p) => p.includes("CALENDAR_DRIVER"))).toBe(true);
+    // Passes with a service account...
+    const sa = await runStartup({
+      ...CLEAN,
+      CALENDAR_DRIVER: "google",
+      GOOGLE_SA_CLIENT_EMAIL: "svc@proj.iam.gserviceaccount.com",
+      GOOGLE_SA_PRIVATE_KEY: "key",
+    });
+    expect(sa).toEqual([]);
+    // ...or a legacy token.
+    const legacy = await runStartup({
+      ...CLEAN,
+      CALENDAR_DRIVER: "google",
+      GOOGLE_CALENDAR_TOKEN: "tok",
+    });
+    expect(legacy).toEqual([]);
+  });
+
+  it("flags gmail mailer driver with no service account or token", async () => {
+    const problems = await runStartup({ ...CLEAN, MAILER_DRIVER: "gmail" });
+    expect(problems.some((p) => p.includes("MAILER_DRIVER"))).toBe(true);
+    const ok = await runStartup({ ...CLEAN, MAILER_DRIVER: "gmail", GMAIL_TOKEN: "tok" });
     expect(ok).toEqual([]);
   });
 });
