@@ -157,7 +157,9 @@ v0.6 scaffold. **Live and smoke-tested:**
 - **Phase 3 — Comms:** template → approval → gated send, idempotent outbox, opaque keys.
 - **Phase 4 — LEA:** Board vs. County Clerk (St. Louis City ≠ St. Louis County).
 
-Still to do: live Clerk app + Airtable/Calendar/Gmail against real providers; the remaining public-data clients (FEC / ACS / DESE / OSM); deploy + CORS/secrets lockdown. The Census geocoder is coded but unverified against the live endpoint from this sandbox.
+Public-data clients (Census geocoder + ACS demographics, FEC race finance, OSM venues, DESE district profile) are implemented server-side with timeouts and graceful nulls, and covered by deterministic mocked-fetch tests (`service/src/__tests__/publicData.test.ts`). They were not live-verified from the build sandbox (egress is allowlist-restricted); ACS/OSM venue enrichment attaches to `/location/resolve` only when `ENRICH_RESOLVE=true`.
+
+Still to do: live Clerk app + Airtable/Calendar/Gmail against real providers (the Airtable adapter is hardened + tested — see `docs/airtable-setup.md` — pending live credentials); Calendar/Gmail still need service-account OAuth; deploy + CORS/secrets lockdown; and a live run of the public-data clients against real endpoints.
 
 ## Tests & CI
 

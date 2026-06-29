@@ -7,13 +7,20 @@
 import type {
   Phase,
   ResolveResponse,
+  ResolveEnrichment,
   ResolvedLocation,
   ResourceCard,
   Scope,
   LocationInput,
 } from "./types.js";
 import { currentPhase } from "../phase.js";
-import { geocodeAddress, inferConfidence, leaForCounty } from "./publicData.js";
+import {
+  demographicsForZip,
+  geocodeAddress,
+  inferConfidence,
+  leaForCounty,
+  nearbyVenues,
+} from "./publicData.js";
 
 const SOS_REGISTER = "https://www.sos.mo.gov/elections/goVoteMissouri/register";
 const SOS_STATUS = "https://voteroutreach.sos.mo.gov/portal/";
@@ -273,5 +280,27 @@ export async function resolveLocalContext(
     visible(c, phase, scopes, confidence)
   );
 
-  return { location, phase, cards };
+  const response: ResolveResponse = { location, phase, cards };
+
+  // Optional public-data enrichment — off by default so resolve stays fast and
+  // deterministic. When ENRICH_RESOLVE=true, attach ACS demographics + nearby
+  // civic venues; both degrade to null/empty and never block the response.
+  if (process.env.ENRICH_RESOLVE === "true") {
+    const [demographics, venues] = await Promise.all([
+      demographicsForZip(input.zip),
+      nearbyVenues(geo.lat, geo.lng),
+    ]);
+    const enrichment: ResolveEnrichment = {
+      demographics: demographics
+        ? {
+            population: demographics.population,
+            medianHouseholdIncome: demographics.medianHouseholdIncome,
+          }
+        : null,
+      venues,
+    };
+    response.enrichment = enrichment;
+  }
+
+  return response;
 }
