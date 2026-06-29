@@ -159,6 +159,32 @@ v0.6 scaffold. **Live and smoke-tested:**
 
 Still to do: live Clerk app + Airtable/Calendar/Gmail against real providers; the remaining public-data clients (FEC / ACS / DESE / OSM); deploy + CORS/secrets lockdown. The Census geocoder is coded but unverified against the live endpoint from this sandbox.
 
+## Tests & CI
+
+Automated coverage runs under **Vitest** as two projects — `service` (Node) and
+`extension` (jsdom + Testing Library).
+
+```bash
+npm test          # run the whole suite once
+npm run test:watch
+```
+
+The suite targets the high-risk production paths rather than chasing a coverage
+number:
+
+- **Service unit** — phase clock boundaries, RBAC scope derivation (SMS is
+  admin-only), step-up token mint/verify, Twilio signature validation, audit
+  hash-chain tamper detection, SMS kill switch / daily cap, and the
+  refuse-to-boot guard.
+- **Service integration** (supertest, app imported in-process) — auth/RBAC
+  rejection codes, optimistic-locking `409`s, the registration phase deadline,
+  shift capacity, the layered SMS send guard, and the signed Twilio STOP webhook.
+- **Extension** — the countdown formatter, role labels, scope-gated tab
+  rendering, and the sign-in form.
+
+`.github/workflows/ci.yml` runs `npm ci → typecheck → build → test` on every push
+and pull request.
+
 ## Compliance (educational, not legal advice)
 
 - Link out to official **sos.mo.gov** for registration and polling-place lookup; never re-host or scrape.
