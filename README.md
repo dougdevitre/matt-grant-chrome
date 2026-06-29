@@ -159,7 +159,7 @@ v0.6 scaffold. **Live and smoke-tested:**
 
 Public-data clients (Census geocoder + ACS demographics, FEC race finance, OSM venues, DESE district profile) are implemented server-side with timeouts and graceful nulls, and covered by deterministic mocked-fetch tests (`service/src/__tests__/publicData.test.ts`). They were not live-verified from the build sandbox (egress is allowlist-restricted); ACS/OSM venue enrichment attaches to `/location/resolve` only when `ENRICH_RESOLVE=true`.
 
-Still to do: live Clerk app + Airtable/Calendar/Gmail against real providers (the Airtable adapter is hardened + tested — see `docs/airtable-setup.md` — pending live credentials); Calendar/Gmail still need service-account OAuth; deploy + CORS/secrets lockdown; and a live run of the public-data clients against real endpoints.
+Still to do: live Clerk app + Airtable/Calendar/Gmail against real providers. The Airtable adapter is hardened + tested (`docs/airtable-setup.md`) and the Google Calendar/Gmail adapters now use a service-account OAuth flow with token refresh (`docs/google-oauth-setup.md`) — all three are code-complete + tested, pending live credentials. Remaining: deploy + CORS/secrets lockdown, and a live run of the public-data clients against real endpoints.
 
 ## Tests & CI
 
