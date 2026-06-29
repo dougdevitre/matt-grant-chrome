@@ -1,5 +1,22 @@
 # Production auth: Clerk sign-in + testing against a live URL
 
+## Your production values (Matt Grant for Congress)
+
+```
+VITE_CLERK_PUBLISHABLE_KEY=pk_live_Y2xlcmsubWF0dGdyYW50Zm9yY29uZ3Jlc3Mub3JnJA
+VITE_API_BASE=<your deployed backend URL>   # not deployed yet
+```
+Backend env / SSM:
+```
+AUTH_DRIVER=clerk
+CLERK_ISSUER=https://clerk.mattgrantforcongress.org
+CLERK_JWKS_URL=https://clerk.mattgrantforcongress.org/.well-known/jwks.json
+SSM_PREFIX=/matt-grant-chrome/production
+```
+Still needed: the deployed backend URL, your extension ID (for Clerk
+allowed_origins + backend ALLOWED_ORIGIN), the `mattgrant` JWT template, and
+each user's `public_metadata.role`.
+
 The extension supports two auth modes, chosen **at build time**:
 
 - **Dev mode** (no `VITE_CLERK_PUBLISHABLE_KEY`): the name + shared-access-code
@@ -24,7 +41,7 @@ You need a public HTTPS URL for the service. Note it (e.g.
 
 1. Create a Clerk application (or use an existing one). Copy:
    - **Publishable key** (`pk_test_…` / `pk_live_…`)
-   - **Frontend API URL** (e.g. `https://<slug>.clerk.accounts.dev`)
+   - **Frontend API URL** (e.g. `https://clerk.mattgrantforcongress.org`)
    - **JWKS URL** (`<frontend-api>/.well-known/jwks.json`) and **Issuer**
      (the Frontend API URL).
 2. **JWT template** → create one named **`mattgrant`** with claims:
@@ -48,8 +65,8 @@ You need a public HTTPS URL for the service. Note it (e.g.
 ```
 NODE_ENV=production
 AUTH_DRIVER=clerk
-CLERK_JWKS_URL=https://<slug>.clerk.accounts.dev/.well-known/jwks.json
-CLERK_ISSUER=https://<slug>.clerk.accounts.dev
+CLERK_JWKS_URL=https://clerk.mattgrantforcongress.org/.well-known/jwks.json
+CLERK_ISSUER=https://clerk.mattgrantforcongress.org
 JWT_SECRET=<a strong random secret>
 ALLOWED_ORIGIN=chrome-extension://<EXTENSION_ID>
 STORE_DRIVER=memory        # or airtable (+ AIRTABLE_PAT / AIRTABLE_BASE_ID)
@@ -86,7 +103,7 @@ Also pin both hosts in `extension/public/manifest.json` `host_permissions`:
 ```json
 "host_permissions": [
   "https://matt-grant-service.onrender.com/*",
-  "https://<slug>.clerk.accounts.dev/*"
+  "https://clerk.mattgrantforcongress.org/*"
 ]
 ```
 then rebuild.

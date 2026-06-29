@@ -13,8 +13,8 @@ Twilio creds present. See `service/src/config.ts` (`assertSecureStartup`).
 ```
 NODE_ENV=production
 AUTH_DRIVER=clerk
-CLERK_JWKS_URL=https://<slug>.clerk.accounts.dev/.well-known/jwks.json
-CLERK_ISSUER=https://<slug>.clerk.accounts.dev
+CLERK_JWKS_URL=https://clerk.mattgrantforcongress.org/.well-known/jwks.json
+CLERK_ISSUER=https://clerk.mattgrantforcongress.org
 JWT_SECRET=<strong random>
 ALLOWED_ORIGIN=chrome-extension://<EXTENSION_ID>
 STORE_DRIVER=memory            # or airtable (+ AIRTABLE_PAT, AIRTABLE_BASE_ID)
@@ -53,7 +53,7 @@ consistently — set `SSM_PREFIX` on the running service to match.
 
 ```bash
 REGION=us-east-1
-PFX=/matt-grant-chrome/prod        # set SSM_PREFIX to this exact value
+PFX=/matt-grant-chrome/productionuction        # set SSM_PREFIX to this exact value
 
 # --- check what already exists (names only, no secret values) ---
 aws ssm get-parameters-by-path --region $REGION \
@@ -61,9 +61,9 @@ aws ssm get-parameters-by-path --region $REGION \
 
 # --- auth (required) ---
 aws ssm put-parameter --region $REGION --name $PFX/CLERK_ISSUER   --type String \
-  --value "https://<slug>.clerk.accounts.dev"
+  --value "https://clerk.mattgrantforcongress.org"
 aws ssm put-parameter --region $REGION --name $PFX/CLERK_JWKS_URL --type String \
-  --value "https://<slug>.clerk.accounts.dev/.well-known/jwks.json"
+  --value "https://clerk.mattgrantforcongress.org/.well-known/jwks.json"
 aws ssm put-parameter --region $REGION --name $PFX/JWT_SECRET --type SecureString \
   --value "$(openssl rand -hex 32)"
 

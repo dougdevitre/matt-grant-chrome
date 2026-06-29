@@ -31,6 +31,6 @@
   ],
   "host_permissions": [
     "https://REPLACE-WITH-YOUR-BACKEND-DOMAIN/*",
-    "https://REPLACE-WITH-YOUR-CLERK-FRONTEND-API/*"
+    "https://clerk.mattgrantforcongress.org/*"
   ]
 }
