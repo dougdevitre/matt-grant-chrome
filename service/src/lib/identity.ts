@@ -1,10 +1,13 @@
 // Auth: turn a caller's credential into a VerifiedIdentity, then mint the
 // short-lived scoped JWT the rest of the service already consumes.
 //
-//   dev   (default): caller posts { devSecret, sub, role }. The shared secret is
-//                    checked server-side; never works in production.
-//   clerk (flag):    caller posts { sessionToken }. Verified against Clerk's
-//                    JWKS (RS256); role comes from the token's claims.
+//   dev   (AUTH_DRIVER=dev, non-prod only): caller posts { devSecret, sub, role }.
+//                    The shared secret is required (no default) and checked
+//                    server-side; the driver is disabled in production.
+//   clerk (AUTH_DRIVER=clerk): caller posts { sessionToken }. Verified against
+//                    Clerk's JWKS (RS256, issuer + optional audience); role comes
+//                    from the token's claims.
+// AUTH_DRIVER must be set explicitly — there is no silent default.
 //
 // The minted token is signed with JWT_SECRET and carries only { sub, role } with
 // an expiry, so the existing `authenticate` middleware verifies it unchanged.
@@ -65,7 +68,8 @@ class ClerkVerifier implements IdentityVerifier {
   private jwks: Jwk[] | null = null;
   constructor(
     private jwksUrl: string,
-    private issuer: string
+    private issuer: string,
+    private audience?: string
   ) {}
 
   private async loadJwks(): Promise<void> {
@@ -102,6 +106,7 @@ class ClerkVerifier implements IdentityVerifier {
       const payload = jwt.verify(token, key, {
         issuer: this.issuer,
         algorithms: ["RS256"],
+        ...(this.audience ? { audience: this.audience } : {}),
       }) as Record<string, unknown>;
       // Role lives in Clerk publicMetadata.role (mirror it into the session
       // token via a JWT template) or a top-level `role` claim.
@@ -122,23 +127,36 @@ let singleton: IdentityVerifier | null = null;
 
 export async function getVerifier(): Promise<IdentityVerifier> {
   if (singleton) return singleton;
-  const driver = process.env.AUTH_DRIVER ?? "dev";
+  // No silent default: the driver must be chosen explicitly so a missing/typo'd
+  // AUTH_DRIVER can never quietly fall back to dev auth.
+  const driver = process.env.AUTH_DRIVER;
   if (driver === "clerk") {
     const jwksUrl = await getConfig("CLERK_JWKS_URL");
     const issuer = await getConfig("CLERK_ISSUER");
+    const audience = await getConfig("CLERK_AUDIENCE"); // optional; enforced when set
     if (jwksUrl && issuer) {
-      singleton = new ClerkVerifier(jwksUrl, issuer);
+      singleton = new ClerkVerifier(jwksUrl, issuer, audience ?? undefined);
       return singleton;
     }
     throw new Error("clerk auth selected but CLERK_JWKS_URL/CLERK_ISSUER missing");
   }
-  // dev driver must never run in production.
-  if (NODE_ENV === "production") {
-    throw new Error("dev auth driver is disabled in production");
+  if (driver === "dev") {
+    // dev driver must never run in production, and requires an explicit secret
+    // (no hardcoded fallback that could ship by accident).
+    if (NODE_ENV === "production") {
+      throw new Error("dev auth driver is disabled in production");
+    }
+    const devSecret = await getConfig("DEV_AUTH_SECRET");
+    if (!devSecret) throw new Error("AUTH_DRIVER=dev requires DEV_AUTH_SECRET");
+    singleton = new DevVerifier(devSecret);
+    return singleton;
   }
-  const devSecret = (await getConfig("DEV_AUTH_SECRET")) ?? "dev-only-change-me";
-  singleton = new DevVerifier(devSecret);
-  return singleton;
+  throw new Error("AUTH_DRIVER must be set to 'clerk' or 'dev'");
+}
+
+/** Test-only: drop the cached verifier so a test can switch drivers/config. */
+export function resetVerifierForTests(): void {
+  singleton = null;
 }
 
 export function mintScopedToken(
