@@ -5,7 +5,7 @@ import { ImportPanel } from "./ImportPanel.js";
 import { api } from "../lib/api.js";
 
 vi.mock("../lib/api.js", () => ({
-  api: { contacts: vi.fn(), importPreview: vi.fn(), importCommit: vi.fn() },
+  api: { contactsPage: vi.fn(), importPreview: vi.fn(), importCommit: vi.fn() },
 }));
 
 const preview = {
@@ -46,9 +46,12 @@ describe("ImportPanel", () => {
   });
 
   it("lists existing contacts when the clerk can read them", async () => {
-    vi.mocked(api.contacts).mockResolvedValue([
-      { id: "c1", firstName: "Avery", lastName: "Nguyen", zip: "63031", email: null, phone: "+1314", regStatus: "registered" },
-    ] as never);
+    vi.mocked(api.contactsPage).mockResolvedValue({
+      items: [
+        { id: "c1", firstName: "Avery", lastName: "Nguyen", zip: "63031", email: null, phone: "+1314", regStatus: "registered" },
+      ],
+      total: 1,
+    } as never);
     render(<ImportPanel canRead={true} />);
     expect(await screen.findByText("Avery", { exact: false })).toBeInTheDocument();
     expect(screen.getByText("registered")).toBeInTheDocument();

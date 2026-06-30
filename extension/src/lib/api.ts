@@ -28,7 +28,7 @@ async function getBase(): Promise<string> {
   return typeof apiBase === "string" && apiBase ? apiBase : DEFAULT_BASE;
 }
 
-async function call<T>(path: string, init?: RequestInit): Promise<T> {
+async function request(path: string, init?: RequestInit): Promise<Response> {
   const token = await getToken();
   if (!token) throw new Error("not_signed_in");
   const base = await getBase();
@@ -44,7 +44,25 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
     const detail = await res.json().catch(() => ({}));
     throw new Error(detail.error ?? `http_${res.status}`);
   }
-  return (await res.json()) as T;
+  return res;
+}
+
+async function call<T>(path: string, init?: RequestInit): Promise<T> {
+  return (await (await request(path, init)).json()) as T;
+}
+
+/** A paged list: the (possibly sliced) items plus the full count from the
+ *  `X-Total-Count` header the server sets. */
+export interface Page<T> {
+  items: T[];
+  total: number;
+}
+
+async function callList<T>(path: string, init?: RequestInit): Promise<Page<T>> {
+  const res = await request(path, init);
+  const items = (await res.json()) as T[];
+  const total = Number(res.headers.get("X-Total-Count"));
+  return { items, total: Number.isFinite(total) ? total : items.length };
 }
 
 export const api = {
@@ -93,6 +111,20 @@ export const api = {
     if (regStatus) qs.set("regStatus", regStatus);
     const s = qs.toString() ? `?${qs.toString()}` : "";
     return call<Contact[]>(`/contacts${s}`);
+  },
+  // Paged variant: returns the slice + the full total (X-Total-Count).
+  contactsPage: (opts: {
+    limit: number;
+    offset: number;
+    zip?: string | null;
+    regStatus?: string | null;
+  }) => {
+    const qs = new URLSearchParams();
+    qs.set("limit", String(opts.limit));
+    qs.set("offset", String(opts.offset));
+    if (opts.zip) qs.set("zip", opts.zip);
+    if (opts.regStatus) qs.set("regStatus", opts.regStatus);
+    return callList<Contact>(`/contacts?${qs.toString()}`);
   },
   importPreview: (csv: string) =>
     call<ImportPreview>("/contacts/import/preview", {
