@@ -16,7 +16,8 @@ unless `AUTH_DRIVER=clerk` (dev auth is forbidden) and `JWT_SECRET` is set to a 
 2. Give each clerk a **role** in Clerk **`publicMetadata.role`** — one of:
    `registration_clerk`, `voter_contact_clerk`, `list_data_clerk`, `compliance_clerk`,
    `events_clerk`, `social_comms_clerk`, `admin`. (Anyone without one of these is treated as
-   `public` — civic info only, no clerk actions.)
+   `public` — civic info only, no clerk actions.) Set these one-by-one in the dashboard, or in
+   bulk from a CSV with `scripts/set-clerk-roles.mjs` (see **Bulk role assignment** below).
 3. Make sure the **session token carries the role**. The verifier reads
    `publicMetadata.role` first, then a top-level `role` claim — so either:
    - use the default session token (it includes `publicMetadata`), or
@@ -72,6 +73,34 @@ the Clerk tab falls back to manual token paste — so local dev and CI need no C
 4. **Live check:** load `extension/dist` in Chrome, open the side panel, sign in on the Clerk
    tab, and confirm `GET /me` returns the role's scopes and an SMS step-up re-auths. (This is the
    one step that can't run from the build sandbox — egress + a registered origin are required.)
+
+## Bulk role assignment
+
+To set `publicMetadata.role` for many clerks at once, use the helper script with a CSV. It
+validates every role against the canonical set in `service/src/rbac.ts` **before** applying
+anything, so a typo never half-applies the batch.
+
+```bash
+# clerks.csv:
+#   email,role
+#   ada@example.org,registration_clerk
+#   grace@example.org,admin
+
+# Preview without changing anything (no secret needed):
+node scripts/set-clerk-roles.mjs clerks.csv --dry-run
+
+# Apply (secret read from the env var only — never commit or pass it on the CLI):
+CLERK_SECRET_KEY=sk_live_… node scripts/set-clerk-roles.mjs clerks.csv
+```
+
+Notes:
+- The CSV needs an `email,role` header row (column order doesn't matter; matched by name).
+- A user must have **signed in at least once** so Clerk has a user record to match by email; the
+  script reports `SKIP <email>: no Clerk user` for any it can't find and exits non-zero if any row
+  fails, so you can re-run it for the stragglers later.
+- It calls the Clerk **Backend API** (`api.clerk.com`), so it needs the **secret** key
+  (`sk_live_…` / `sk_test_…`) — not the publishable key. Get it from the Clerk dashboard → API
+  keys, export it for the one command, and let it leave your shell when the command ends.
 
 ## Verifying
 
