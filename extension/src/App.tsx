@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import "./styles.css";
 import { api, signOut } from "./lib/api.js";
+import { clerkSignOut } from "./lib/clerkSession.js";
 import { ROLE_LABELS } from "./lib/rbac.js";
 import type {
   ClerkIdentity,
@@ -67,6 +68,7 @@ export default function App() {
 
   async function handleSignOut() {
     await signOut();
+    await clerkSignOut(); // also end the Clerk session (no-op when Clerk is off)
     setMe(null);
     setData(null);
     setNeedsAuth(true);

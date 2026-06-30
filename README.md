@@ -162,7 +162,13 @@ Public-data clients (Census geocoder + ACS demographics, FEC race finance, OSM v
 
 Providers are code-complete + tested, pending live credentials: Clerk auth (`docs/clerk-setup.md`), Airtable storage (`docs/airtable-setup.md`), and Google Calendar/Gmail via service-account OAuth with token refresh (`docs/google-oauth-setup.md`). The deploy path is in place — root `Dockerfile` + `docs/deploy.md`, with security headers, pinned CORS, and the refuse-to-boot guard.
 
-Still to do: stand up the live Clerk/Airtable/Google/Twilio accounts and flip their drivers on; wire the real Clerk sign-in UI into the extension (the backend already accepts `{ sessionToken }`); and a live run of the public-data clients against real endpoints (egress is allowlist-restricted in the build sandbox).
+The extension now does **in-panel Clerk sign-in** via `@clerk/chrome-extension`: set
+`VITE_CLERK_PUBLISHABLE_KEY` (see `extension/.env.example` + `docs/clerk-setup.md`) and the Clerk
+tab signs the clerk in and auto-exchanges the session token; with no key it falls back to Dev /
+manual paste. Still to do: stand up the live Clerk/Airtable/Google/Twilio accounts and flip their
+drivers on; allow-list the extension origin in Clerk and set each clerk's `publicMetadata.role`;
+and a live run of the public-data clients against real endpoints (egress is allowlist-restricted
+in the build sandbox).
 
 ## Tests & CI
 
