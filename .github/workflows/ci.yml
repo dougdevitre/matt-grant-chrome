@@ -26,3 +26,24 @@ jobs:
 
       - name: Test
         run: npm test
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the production image
+        run: docker build -t matt-grant-chrome-service .
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # Fail only on high/critical advisories so routine low-sev noise doesn't
+      # block every PR; review the report for lower severities.
+      - name: npm audit
+        run: npm audit --audit-level=high
