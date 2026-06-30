@@ -82,8 +82,12 @@ export async function makeAirtableStore(): Promise<StorePort> {
     column: string,
     value: string
   ): Promise<T | undefined> {
-    const safe = value.replace(/'/g, "\\'"); // escape quotes in the formula literal
-    const formula = encodeURIComponent(`{${column}}='${safe}'`);
+    // Airtable formula string literals have no backslash escaping, so a value
+    // containing a single quote could break out of the literal. Callers pass
+    // server-generated ids / hashed keys / route-validated keys, so fail closed
+    // here rather than risk formula injection.
+    if (value.includes("'")) return undefined;
+    const formula = encodeURIComponent(`{${column}}='${value}'`);
     const res = await req<{ records: AirtableRecord<T>[] }>(
       "GET",
       `${encodeURIComponent(table)}?filterByFormula=${formula}&maxRecords=1`

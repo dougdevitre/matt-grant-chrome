@@ -68,14 +68,22 @@ class ClerkVerifier implements IdentityVerifier {
     private issuer: string
   ) {}
 
+  private async loadJwks(): Promise<void> {
+    const res = await fetch(this.jwksUrl);
+    if (!res.ok) throw new Error("jwks_fetch_failed");
+    const body = (await res.json()) as { keys: Jwk[] };
+    this.jwks = body.keys;
+  }
+
   private async keyFor(kid: string) {
-    if (!this.jwks) {
-      const res = await fetch(this.jwksUrl);
-      if (!res.ok) throw new Error("jwks_fetch_failed");
-      const body = (await res.json()) as { keys: Jwk[] };
-      this.jwks = body.keys;
+    if (!this.jwks) await this.loadJwks();
+    let jwk = this.jwks!.find((k) => k.kid === kid);
+    if (!jwk) {
+      // Unknown kid — Clerk may have rotated keys; refetch once before failing
+      // (otherwise a rotation would break all logins until a restart).
+      await this.loadJwks();
+      jwk = this.jwks!.find((k) => k.kid === kid);
     }
-    const jwk = this.jwks.find((k) => k.kid === kid);
     if (!jwk) throw new Error("jwks_kid_not_found");
     return createPublicKey({
       key: jwk,
@@ -168,7 +176,10 @@ export function verifyStepUp(
 ): boolean {
   if (!token) return false;
   try {
-    const p = jwt.verify(token, secret) as { sub?: string; sa?: boolean };
+    const p = jwt.verify(token, secret, { algorithms: ["HS256"] }) as {
+      sub?: string;
+      sa?: boolean;
+    };
     return p.sa === true && p.sub === subject;
   } catch {
     return false;

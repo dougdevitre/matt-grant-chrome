@@ -167,6 +167,14 @@ describe("Airtable adapter", () => {
     expect(await store.getOutboxByKey("nope")).toBeUndefined();
   });
 
+  it("fails closed on a formula-injecting key (quote) without querying", async () => {
+    const store = await makeAirtableStore();
+    const before = fake.calls.length;
+    expect(await store.getOutboxByKey("x') | TRUE() & ('")).toBeUndefined();
+    // No GET was issued for the malicious value.
+    expect(fake.calls.length).toBe(before);
+  });
+
   it("round-trips opt-out via the ContactKey point read", async () => {
     const store = await makeAirtableStore();
     await store.addOptOut("contactkey-abc");

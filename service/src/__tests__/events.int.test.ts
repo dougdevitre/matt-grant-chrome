@@ -66,4 +66,14 @@ describe("shift claim", () => {
     expect(res.status).toBe(409);
     expect(res.body.error).toBe("version_conflict");
   });
+
+  it("forbids the voter-facing public role from claiming a shift (403)", async () => {
+    const id = await tableCaptainShiftId(tokenFor("admin", "c1"));
+    const res = await request(app)
+      .post(`/events/shifts/${id}/claim`)
+      .set("Authorization", bearer(tokenFor("public", "voter-1")))
+      .send({});
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe("forbidden");
+  });
 });
