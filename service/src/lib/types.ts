@@ -268,6 +268,7 @@ export interface Contact {
   assignedClerkId: string | null;
   contactKey: string; // opaque key shared with the opt-out list
   source: string; // e.g. "import", "manual"
+  version: number; // optimistic concurrency
   createdAt: string;
   updatedAt: string;
 }

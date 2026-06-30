@@ -154,7 +154,7 @@ export function makeMemoryStore(): StorePort {
       return id ? contacts.get(id) : undefined;
     },
     async createContact(input: NewContact) {
-      const c: Contact = { ...input, id: randomUUID(), createdAt: now(), updatedAt: now() };
+      const c: Contact = { ...input, id: randomUUID(), version: 0, createdAt: now(), updatedAt: now() };
       contacts.set(c.id, c);
       if (c.contactKey) contactsByKey.set(c.contactKey, c.id);
       return c;
@@ -162,7 +162,7 @@ export function makeMemoryStore(): StorePort {
     async bulkCreateContacts(inputs: NewContact[]) {
       const created: Contact[] = [];
       for (const input of inputs) {
-        const c: Contact = { ...input, id: randomUUID(), createdAt: now(), updatedAt: now() };
+        const c: Contact = { ...input, id: randomUUID(), version: 0, createdAt: now(), updatedAt: now() };
         contacts.set(c.id, c);
         if (c.contactKey) contactsByKey.set(c.contactKey, c.id);
         created.push(c);
