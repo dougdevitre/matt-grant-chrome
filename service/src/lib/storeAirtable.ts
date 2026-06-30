@@ -13,6 +13,7 @@
 // filtering in the Airtable UI. See docs/airtable-setup.md.
 
 import { getConfig } from "../config.js";
+import { computeAuditHash } from "./auditChain.js";
 import type {
   StorePort,
   NewTask,
@@ -293,10 +294,26 @@ export async function makeAirtableStore(): Promise<StorePort> {
     },
 
     async appendAudit(evt: AuditEvent) {
-      await create("Audit", evt, { Action: evt.action });
+      // Chain over the latest stored row so the Airtable log is tamper-evident
+      // too. Reads the newest by Seq, then writes seq/prevHash/hash. (At
+      // clerk-tool volume concurrent appends are rare; a fork would be caught by
+      // /audit/verify. Seq + Hash are columns so the read can sort/inspect.)
+      const latest = await req<{ records: AirtableRecord<AuditEvent>[] }>(
+        "GET",
+        "Audit?sort%5B0%5D%5Bfield%5D=Seq&sort%5B0%5D%5Bdirection%5D=desc&maxRecords=1"
+      );
+      const prev = latest.records[0]
+        ? (JSON.parse(latest.records[0].fields.Data) as AuditEvent)
+        : null;
+      const seq = (prev?.seq ?? 0) + 1;
+      const withSeq: AuditEvent = { ...evt, seq };
+      const hash = computeAuditHash(prev?.hash ?? null, withSeq);
+      const chained: AuditEvent = { ...withSeq, prevHash: prev?.hash ?? null, hash };
+      await create("Audit", chained, { Action: evt.action, Seq: seq, Hash: hash });
     },
     async readAudit() {
-      return listAll<AuditEvent>("Audit");
+      const all = await listAll<AuditEvent>("Audit");
+      return all.sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
     },
   };
 

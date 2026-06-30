@@ -15,6 +15,7 @@ import { tasksRouter } from "./routes/tasks.js";
 import { eventsRouter } from "./routes/events.js";
 import { commsRouter } from "./routes/comms.js";
 import { contactsRouter } from "./routes/contacts.js";
+import { auditRouter } from "./routes/audit.js";
 import { securityHeaders } from "./lib/securityHeaders.js";
 
 const app = express();
@@ -59,6 +60,7 @@ app.use("/tasks", tasksRouter);
 app.use("/events", eventsRouter);
 app.use("/comms", commsRouter);
 app.use("/contacts", contactsRouter);
+app.use("/audit", auditRouter);
 
 // Fallthrough error handler — never leak internals.
 app.use(

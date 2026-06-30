@@ -16,7 +16,9 @@ review, and the residual risks an operator must own before go-live.
   keys, PII-safe logging (phone masked, body never logged).
 - **Twilio inbound:** HMAC-SHA1 signature verified with `timingSafeEqual` against the
   configured webhook URL (not the request Host); fails closed if the token/URL is unset.
-- **Audit:** tamper-evident SHA-256 hash chain in the in-memory store.
+- **Audit:** tamper-evident SHA-256 hash chain built by **every** store adapter (memory and
+  Airtable) via shared `auditChain.ts`, with a sequence number in the hashed material; the
+  `GET /audit/verify` route (audit.read) recomputes the chain in-app.
 - **Boot guard:** `assertSecureStartup` refuses to start in production on a default/missing
   `JWT_SECRET`, non-Clerk auth, `ALLOWED_ORIGIN=*`, or a provider driver missing its creds. It
   runs at module load, so it also covers serverless deployments that import `app`.
@@ -42,10 +44,13 @@ review, and the residual risks an operator must own before go-live.
 
 ## Residual risks the operator must own
 
-- **Audit durability + verification.** The hash chain lives in the in-memory store; the Airtable
-  audit table stores events **without** the chain, so it is not tamper-evident at rest. For real
-  assurance, export the audit table to an append-only sink and run an independent chain/diff
-  verification on a schedule. Treat Airtable's own revision history as the interim control.
+- **Audit durability + out-of-band verification.** Both stores now chain audit writes and
+  `/audit/verify` checks the chain in-app. But whoever can edit Airtable rows (the PAT) can also
+  recompute the hashes, so the in-app check only catches careless tampering. For real assurance,
+  export the audit table to an **append-only sink** and run the chain verification out-of-band on
+  a schedule. Note: the Airtable chain reads the latest row before each append, so two
+  **concurrent** appends could fork the chain — harmless at clerk-tool volume and caught by
+  `/audit/verify`, but move to a sequenced/transactional store for high write concurrency.
 - **Twilio webhook replay.** Signatures have no timestamp/nonce, so a captured valid request can
   be replayed. The only action (opt-out) is idempotent, so impact is low; add a freshness check
   if the endpoint ever does more.

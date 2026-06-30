@@ -6,6 +6,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeAirtableStore } from "../lib/storeAirtable.js";
+import { verifyAuditChain } from "../lib/auditChain.js";
 
 interface FakeRecord {
   id: string;
@@ -48,6 +49,13 @@ function makeFakeAirtable() {
           const val = m[2].replace(/\\'/g, "'");
           matched = recs.filter((r) => r.fields[col] === val);
         }
+      }
+      const sortField = u.searchParams.get("sort[0][field]");
+      if (sortField) {
+        const dir = u.searchParams.get("sort[0][direction]") === "desc" ? -1 : 1;
+        matched = [...matched].sort(
+          (a, b) => (Number(a.fields[sortField] ?? 0) - Number(b.fields[sortField] ?? 0)) * dir
+        );
       }
       const maxRecords = u.searchParams.get("maxRecords");
       if (maxRecords) {
@@ -183,19 +191,33 @@ describe("Airtable adapter", () => {
     expect(await store.isOptedOut("other")).toBe(false);
   });
 
-  it("appends and reads the audit log", async () => {
+  it("chains the audit log so it is tamper-evident, and verifies", async () => {
     const store = await makeAirtableStore();
-    await store.appendAudit({
-      id: "a1",
-      ts: "2026-07-01T00:00:00Z",
-      clerkId: "c1",
-      action: "task.claim",
-      entity: "task",
-      entityId: "t1",
-    });
+    for (let n = 1; n <= 3; n++) {
+      await store.appendAudit({
+        id: `a${n}`,
+        ts: `2026-07-0${n}T00:00:00Z`,
+        clerkId: `c${n}`,
+        action: "task.claim",
+        entity: "task",
+        entityId: `t${n}`,
+      });
+    }
+
     const audit = await store.readAudit();
-    expect(audit).toHaveLength(1);
-    expect(audit[0].action).toBe("task.claim");
+    expect(audit).toHaveLength(3);
+    // Seq increments and prevHash links to the prior entry's hash.
+    expect(audit.map((e) => e.seq)).toEqual([1, 2, 3]);
+    expect(audit[0].prevHash).toBeNull();
+    expect(audit[1].prevHash).toBe(audit[0].hash);
+    expect(audit[2].prevHash).toBe(audit[1].hash);
+    // Seq + Hash are stored as queryable columns.
+    expect(fake.tables.get("Audit")![0].fields.Seq).toBe(1);
+    expect(verifyAuditChain(audit)).toEqual({ ok: true, brokeAt: -1 });
+
+    // Tampering with a stored row is detected.
+    const tampered = audit.map((e, i) => (i === 1 ? { ...e, action: "task.delete" } : e));
+    expect(verifyAuditChain(tampered)).toEqual({ ok: false, brokeAt: 1 });
   });
 
   it("surfaces the Airtable error body in the thrown message", async () => {

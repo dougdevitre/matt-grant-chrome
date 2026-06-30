@@ -28,7 +28,7 @@ are for human-readable filtering in the Airtable UI.
 | `ContactLogs`  | `ContactId`                                                |
 | `OptOut`       | `ContactKey` **(read)**                                    |
 | `Outbox`       | `IdempotencyKey` **(read)**, `Status`                      |
-| `Audit`        | `Action`                                                   |
+| `Audit`        | `Action`, `Seq` (number) **(read)**, `Hash`                |
 
 Notes:
 - `RecordId` holds our own UUID (not Airtable's `rec…` id); the adapter upserts by matching it.
