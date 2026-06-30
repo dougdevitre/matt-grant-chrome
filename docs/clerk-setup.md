@@ -45,10 +45,12 @@ POST /auth/token   { "sessionToken": "<clerk session jwt>" }
 For admin-only SMS, the same Clerk session token is re-presented to `POST /auth/step-up` to
 mint the short-lived `X-StepUp-Token`.
 
-> The current extension sign-in screen (`extension/src/components/SignIn.tsx`) is the **dev**
-> flow (it posts `devSecret`). Wiring the real Clerk sign-in UI into the extension — obtaining
-> the session token client-side and posting `{ sessionToken }` — is the remaining front-end
-> task; the backend already accepts it.
+> The extension sign-in screen (`extension/src/components/SignIn.tsx`) now has a **Clerk**
+> mode (default) that takes a session token and posts `{ sessionToken }`, plus the legacy
+> **Dev** mode. SMS step-up is mode-aware: Clerk re-presents the stored session token, dev
+> re-presents the access code. The remaining polish is **auto-acquiring** the Clerk session
+> token client-side via `@clerk/chrome-extension` (publishable key + `ClerkProvider`) instead
+> of providing it manually — the backend and the rest of the sign-in flow already work.
 
 ## Verifying
 
