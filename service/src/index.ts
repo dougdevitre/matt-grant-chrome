@@ -17,6 +17,9 @@ import { commsRouter } from "./routes/comms.js";
 import { contactsRouter } from "./routes/contacts.js";
 import { auditRouter } from "./routes/audit.js";
 import { securityHeaders } from "./lib/securityHeaders.js";
+import { requestId } from "./lib/requestId.js";
+import { getStore } from "./lib/store.js";
+import { log } from "./lib/logger.js";
 
 const app = express();
 app.disable("x-powered-by"); // don't advertise Express
@@ -30,6 +33,7 @@ app.set(
   tp === undefined || tp === "" ? false : /^\d+$/.test(tp) ? Number(tp) : tp === "true" ? true : tp
 );
 
+app.use(requestId);
 app.use(securityHeaders);
 app.use(express.json({ limit: "256kb" }));
 app.use(express.urlencoded({ extended: false, limit: "64kb" })); // Twilio webhooks
@@ -42,8 +46,19 @@ app.use(
   })
 );
 
-// Public health check (no auth).
+// Liveness (no auth): the process is up.
 app.get("/health", (_req, res) => res.json({ ok: true }));
+
+// Readiness (no auth): the configured store can be constructed. Kept light — it
+// doesn't deep-probe the provider on every poll; a failed construct returns 503.
+app.get("/ready", async (_req, res) => {
+  try {
+    await getStore();
+    res.json({ ready: true });
+  } catch {
+    res.status(503).json({ ready: false });
+  }
+});
 
 // Public: token exchange (Clerk/dev -> scoped JWT).
 app.use("/auth", authRouter);
@@ -62,15 +77,21 @@ app.use("/comms", commsRouter);
 app.use("/contacts", contactsRouter);
 app.use("/audit", auditRouter);
 
-// Fallthrough error handler — never leak internals.
+// Fallthrough error handler — log structured (with the request id) but never
+// leak internals to the client.
 app.use(
   (
     err: unknown,
-    _req: express.Request,
+    req: express.Request,
     res: express.Response,
     _next: express.NextFunction
   ) => {
-    console.error(err);
+    log.error("unhandled_error", {
+      requestId: req.id,
+      method: req.method,
+      path: req.path,
+      err: err instanceof Error ? err.message : String(err),
+    });
     res.status(500).json({ error: "internal_error" });
   }
 );
@@ -84,8 +105,7 @@ export { app };
 // (assertSecureStartup is a no-op outside production, so tests are unaffected).
 const problems = await assertSecureStartup();
 if (problems.length > 0) {
-  console.error("FATAL: insecure configuration, refusing to start:");
-  for (const p of problems) console.error("  - " + p);
+  log.error("insecure_configuration_refusing_to_start", { problems });
   if (NODE_ENV === "production") process.exit(1);
 }
 
@@ -94,7 +114,17 @@ const isMain =
   import.meta.url === `file://${process.argv[1]}`;
 
 if (isMain) {
-  app.listen(PORT, () => {
-    console.log(`matt-grant-chrome service listening on :${PORT}`);
+  const server = app.listen(PORT, () => {
+    log.info("listening", { port: PORT });
   });
+
+  // Graceful shutdown: stop accepting new connections, let in-flight requests
+  // finish, then exit. A hard timeout guards against a hung connection.
+  const shutdown = (signal: string) => {
+    log.info("shutting_down", { signal });
+    server.close(() => process.exit(0));
+    setTimeout(() => process.exit(1), 10_000).unref();
+  };
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 }

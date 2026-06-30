@@ -15,3 +15,21 @@ describe("security headers", () => {
     expect(res.headers["x-powered-by"]).toBeUndefined();
   });
 });
+
+describe("request id + readiness", () => {
+  it("generates an X-Request-Id when none is supplied", async () => {
+    const res = await request(app).get("/health");
+    expect(res.headers["x-request-id"]).toMatch(/[0-9a-f-]{36}/);
+  });
+
+  it("echoes a supplied X-Request-Id", async () => {
+    const res = await request(app).get("/health").set("X-Request-Id", "trace-abc");
+    expect(res.headers["x-request-id"]).toBe("trace-abc");
+  });
+
+  it("reports ready when the store is constructable", async () => {
+    const res = await request(app).get("/ready");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ ready: true });
+  });
+});

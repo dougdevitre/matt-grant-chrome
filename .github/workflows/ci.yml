@@ -26,3 +26,26 @@ jobs:
 
       - name: Test
         run: npm test
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the production image
+        run: docker build -t matt-grant-chrome-service .
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # Audit the dependencies that actually ship (the Docker runtime installs
+      # --omit=dev), failing on high/critical. Dev-toolchain advisories
+      # (vite/vitest/esbuild) aren't in the deployed artifact and are handled by
+      # Dependabot's major-version bumps instead of blocking every PR.
+      - name: npm audit (production deps)
+        run: npm audit --omit=dev --audit-level=high

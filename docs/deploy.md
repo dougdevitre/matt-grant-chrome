@@ -48,8 +48,11 @@ docker run -p 8787:8787 \
 
 The root `Dockerfile` builds the service and ships a slim production image (`node:20-slim`,
 runs as the non-root `node` user). On Fargate: attach the IAM task role above, set env/secrets,
-expose `8787` behind an ALB, and point the **health check** at `GET /health`. Front with HTTPS
-(ACM cert on the ALB); the app emits HSTS in production.
+expose `8787` behind an ALB, and point the **liveness** check at `GET /health` and the
+**readiness** check at `GET /ready` (200 when the store is constructable, else 503). Front with
+HTTPS (ACM cert on the ALB); the app emits HSTS in production. It logs structured JSON
+(`LOG_LEVEL`, default `info`), tags each request with `X-Request-Id` (honoring an inbound one
+from the gateway), and shuts down gracefully on `SIGTERM` (drains in-flight requests, 10s cap).
 
 ## Option B — Lambda + API Gateway
 
