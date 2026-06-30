@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, stepUp } from "../lib/api.js";
+import { api, stepUp, authMode } from "../lib/api.js";
 import type { ClerkIdentity, MessageTemplate } from "../lib/types.js";
 
 function statusOf(t: MessageTemplate): "approved" | "pending" | "needs_fix" {
@@ -27,6 +27,10 @@ export function CommsPanel({ me }: { me: ClerkIdentity }) {
   const [sendMsg, setSendMsg] = useState<string | null>(null);
 
   const isAdmin = me.scopes.includes("sms.send" as never);
+  const [mode, setMode] = useState<"dev" | "clerk">("dev");
+  useEffect(() => {
+    authMode().then(setMode);
+  }, []);
 
   async function load() {
     try {
@@ -82,7 +86,8 @@ export function CommsPanel({ me }: { me: ClerkIdentity }) {
           setError("SMS sending is restricted to admins.");
           return;
         }
-        stepUpToken = await stepUp(stepCode);
+        // Dev re-presents the access code; Clerk re-presents the stored session token.
+        stepUpToken = await stepUp(mode === "dev" ? stepCode : undefined);
       }
       await api.send(sendTemplateId, recipient.trim(), idempotencyKey, stepUpToken);
       setSendMsg("Sent.");
@@ -223,17 +228,21 @@ export function CommsPanel({ me }: { me: ClerkIdentity }) {
               {selectedTpl?.channel === "sms" ? (
                 <>
                   <div className="warn">
-                    SMS is admin-only and audited. Re-enter your access code to
-                    authorize this send.
+                    SMS is admin-only and audited.{" "}
+                    {mode === "dev"
+                      ? "Re-enter your access code to authorize this send."
+                      : "Your session re-authorizes this send."}
                   </div>
-                  <label>
-                    Access code
-                    <input
-                      type="password"
-                      value={stepCode}
-                      onChange={(e) => setStepCode(e.target.value)}
-                    />
-                  </label>
+                  {mode === "dev" ? (
+                    <label>
+                      Access code
+                      <input
+                        type="password"
+                        value={stepCode}
+                        onChange={(e) => setStepCode(e.target.value)}
+                      />
+                    </label>
+                  ) : null}
                 </>
               ) : null}
               <button
@@ -241,7 +250,7 @@ export function CommsPanel({ me }: { me: ClerkIdentity }) {
                 disabled={
                   !sendTemplateId ||
                   !recipient.trim() ||
-                  (selectedTpl?.channel === "sms" && !stepCode.trim())
+                  (selectedTpl?.channel === "sms" && mode === "dev" && !stepCode.trim())
                 }
                 onClick={doSend}
               >

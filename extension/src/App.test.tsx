@@ -22,6 +22,8 @@ vi.mock("./lib/api.js", () => ({
   },
   signOut: vi.fn(),
   signInDev: vi.fn(),
+  signInClerk: vi.fn(),
+  authMode: vi.fn().mockResolvedValue("dev"),
   stepUp: vi.fn(),
 }));
 

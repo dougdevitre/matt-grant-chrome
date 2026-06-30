@@ -168,7 +168,44 @@ export async function signInDev(opts: {
     tokenExpiresAt: Date.now() + data.expiresIn * 1000,
     authSub: opts.sub,
     authRole: data.role,
+    authMode: "dev",
   });
+}
+
+/**
+ * Production sign-in: exchange a Clerk session token for a scoped token. The
+ * session token is also stored so SMS step-up can re-present it. (Acquiring the
+ * Clerk session token client-side is a front-end integration; the backend
+ * `/auth/token` already accepts `{ sessionToken }` when AUTH_DRIVER=clerk.)
+ */
+export async function signInClerk(opts: {
+  base: string;
+  sessionToken: string;
+}): Promise<void> {
+  const res = await fetch(`${opts.base}/auth/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sessionToken: opts.sessionToken }),
+  });
+  if (!res.ok) {
+    const d = await res.json().catch(() => ({}));
+    throw new Error(d.error ?? `http_${res.status}`);
+  }
+  const data = (await res.json()) as { token: string; expiresIn: number; role: string };
+  await chrome.storage.local.set({
+    apiBase: opts.base,
+    authToken: data.token,
+    tokenExpiresAt: Date.now() + data.expiresIn * 1000,
+    authRole: data.role,
+    authMode: "clerk",
+    clerkSessionToken: opts.sessionToken,
+  });
+}
+
+/** Which sign-in flow is active (drives the SMS step-up re-auth UI). */
+export async function authMode(): Promise<"dev" | "clerk"> {
+  const { authMode } = await chrome.storage.local.get("authMode");
+  return authMode === "clerk" ? "clerk" : "dev";
 }
 
 /**
@@ -176,16 +213,24 @@ export async function signInDev(opts: {
  * pass as X-StepUp-Token; not persisted. Dev driver only — the Clerk flow uses
  * a fresh session token instead of the access code.
  */
-export async function stepUp(devSecret: string): Promise<string> {
-  const { apiBase, authSub, authRole } = await chrome.storage.local.get([
-    "apiBase",
-    "authSub",
-    "authRole",
-  ]);
+export async function stepUp(accessCode?: string): Promise<string> {
+  const { apiBase, authSub, authRole, authMode, clerkSessionToken } =
+    await chrome.storage.local.get([
+      "apiBase",
+      "authSub",
+      "authRole",
+      "authMode",
+      "clerkSessionToken",
+    ]);
+  // Clerk re-presents the stored session token; dev re-presents the access code.
+  const body =
+    authMode === "clerk"
+      ? { sessionToken: clerkSessionToken }
+      : { devSecret: accessCode, sub: authSub, role: authRole };
   const res = await fetch(`${apiBase}/auth/step-up`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ devSecret, sub: authSub, role: authRole }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const d = await res.json().catch(() => ({}));
@@ -201,5 +246,7 @@ export async function signOut(): Promise<void> {
     "tokenExpiresAt",
     "authSub",
     "authRole",
+    "authMode",
+    "clerkSessionToken",
   ]);
 }
