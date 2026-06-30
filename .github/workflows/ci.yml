@@ -43,7 +43,9 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      # Fail only on high/critical advisories so routine low-sev noise doesn't
-      # block every PR; review the report for lower severities.
-      - name: npm audit
-        run: npm audit --audit-level=high
+      # Audit the dependencies that actually ship (the Docker runtime installs
+      # --omit=dev), failing on high/critical. Dev-toolchain advisories
+      # (vite/vitest/esbuild) aren't in the deployed artifact and are handled by
+      # Dependabot's major-version bumps instead of blocking every PR.
+      - name: npm audit (production deps)
+        run: npm audit --omit=dev --audit-level=high
