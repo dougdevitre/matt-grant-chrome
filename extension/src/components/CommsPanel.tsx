@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, stepUp, authMode } from "../lib/api.js";
+import { messageForError } from "../lib/errors.js";
 import type { ClerkIdentity, MessageTemplate } from "../lib/types.js";
 
 function statusOf(t: MessageTemplate): "approved" | "pending" | "needs_fix" {
@@ -95,7 +96,7 @@ export function CommsPanel({ me }: { me: ClerkIdentity }) {
       setStepCode("");
     } catch (e) {
       setSendMsg(null);
-      setError(e instanceof Error ? e.message : "send_failed");
+      setError(messageForError(e instanceof Error ? e.message : "send_failed"));
     }
   }
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api.js";
+import { messageForError } from "../lib/errors.js";
 import type { ClerkIdentity, Task } from "../lib/types.js";
 
 function dueLabel(dueAt: string | null): string {
@@ -42,7 +43,11 @@ export function TaskQueue({
       await fn();
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "action_failed");
+      const code = e instanceof Error ? e.message : "action_failed";
+      setError(messageForError(code));
+      // A stale version means someone else changed this task — reload so the
+      // next attempt carries the fresh version.
+      if (code === "version_conflict") await load();
     } finally {
       setBusyId(null);
     }

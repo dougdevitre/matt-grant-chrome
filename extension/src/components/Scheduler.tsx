@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api.js";
+import { messageForError } from "../lib/errors.js";
 import type { ClerkIdentity, EventWithShifts } from "../lib/types.js";
 
 function when(startsAt: string, endsAt: string): string {
@@ -47,7 +48,10 @@ export function Scheduler({
       await api.claimShift(shiftId, version);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "claim_failed");
+      const code = e instanceof Error ? e.message : "claim_failed";
+      setError(messageForError(code));
+      // Stale version: someone else claimed/changed it — reload for fresh state.
+      if (code === "version_conflict") await load();
     } finally {
       setBusyId(null);
     }

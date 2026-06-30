@@ -4,6 +4,8 @@ import type { Contact, ImportPreview } from "../lib/types.js";
 
 const SAMPLE = "firstName,lastName,email,phone,address,city,zip\n";
 
+const PAGE_SIZE = 25;
+
 export function ImportPanel({ canRead }: { canRead: boolean }) {
   const [csv, setCsv] = useState("");
   const [preview, setPreview] = useState<ImportPreview | null>(null);
@@ -11,11 +13,17 @@ export function ImportPanel({ canRead }: { canRead: boolean }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [contacts, setContacts] = useState<Contact[] | null>(null);
+  const [total, setTotal] = useState(0);
 
-  async function loadContacts() {
+  // Load one page; offset 0 replaces the list (fresh load), otherwise appends.
+  async function loadContacts(offset = 0) {
     if (!canRead) return;
     try {
-      setContacts(await api.contacts());
+      const page = await api.contactsPage({ limit: PAGE_SIZE, offset });
+      setTotal(page.total);
+      setContacts((prev) =>
+        offset === 0 ? page.items : [...(prev ?? []), ...page.items]
+      );
     } catch {
       /* contacts list is optional; ignore */
     }
@@ -126,7 +134,10 @@ export function ImportPanel({ canRead }: { canRead: boolean }) {
 
       {canRead && contacts ? (
         <div className="contacts">
-          <h2 className="section-h">Contacts ({contacts.length})</h2>
+          <h2 className="section-h">
+            Contacts ({contacts.length}
+            {total > contacts.length ? ` of ${total}` : ""})
+          </h2>
           {contacts.map((c) => (
             <div className="contact" key={c.id}>
               <div>
@@ -141,6 +152,15 @@ export function ImportPanel({ canRead }: { canRead: boolean }) {
               <span className={`tag ${c.regStatus}`}>{c.regStatus}</span>
             </div>
           ))}
+          {contacts.length < total ? (
+            <button
+              className="btn secondary"
+              disabled={busy}
+              onClick={() => loadContacts(contacts.length)}
+            >
+              Load more
+            </button>
+          ) : null}
         </div>
       ) : null}
     </div>
