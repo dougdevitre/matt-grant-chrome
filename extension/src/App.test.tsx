@@ -27,6 +27,16 @@ vi.mock("./lib/api.js", () => ({
   stepUp: vi.fn(),
 }));
 
+// App → SignIn → ClerkSignIn statically imports the Clerk SDK; stub it so tests
+// don't load the real (browser-oriented) package. Clerk is disabled in tests
+// (no VITE key), so SignIn isn't even rendered here.
+vi.mock("@clerk/chrome-extension", () => ({
+  ClerkProvider: ({ children }: { children: unknown }) => children,
+  SignIn: () => null,
+  useAuth: () => ({ isSignedIn: false, getToken: vi.fn() }),
+  useClerk: () => ({ signOut: vi.fn() }),
+}));
+
 const PHASE = {
   phase: "PHASE_1_REGISTER",
   label: "Register",

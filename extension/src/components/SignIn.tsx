@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { signInDev, signInClerk } from "../lib/api.js";
+import { clerkEnabled } from "../lib/clerkConfig.js";
+import { ClerkSignIn } from "./ClerkSignIn.js";
 import type { Role } from "../lib/types.js";
 
 const ROLES: { value: Role; label: string }[] = [
@@ -79,15 +81,22 @@ export function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
         </label>
 
         {mode === "clerk" ? (
-          <label>
-            Clerk session token
-            <textarea
-              className="textarea"
-              value={sessionToken}
-              placeholder="Paste your Clerk session token"
-              onChange={(e) => setSessionToken(e.target.value)}
+          clerkEnabled ? (
+            <ClerkSignIn
+              base={base.trim().replace(/\/$/, "")}
+              onSignedIn={onSignedIn}
             />
-          </label>
+          ) : (
+            <label>
+              Clerk session token
+              <textarea
+                className="textarea"
+                value={sessionToken}
+                placeholder="Paste your Clerk session token"
+                onChange={(e) => setSessionToken(e.target.value)}
+              />
+            </label>
+          )
         ) : (
           <>
             <label>
@@ -123,10 +132,16 @@ export function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
           </>
         )}
 
-        <button className="btn" disabled={!canSubmit} onClick={submit}>
-          {busy ? "Signing in…" : "Sign in"}
-        </button>
-        {error ? <div className="warn">Sign-in failed: {error}</div> : null}
+        {/* Clerk's hosted widget submits itself; the manual button drives the
+            Dev flow and the Clerk paste fallback. */}
+        {mode === "clerk" && clerkEnabled ? null : (
+          <>
+            <button className="btn" disabled={!canSubmit} onClick={submit}>
+              {busy ? "Signing in…" : "Sign in"}
+            </button>
+            {error ? <div className="warn">Sign-in failed: {error}</div> : null}
+          </>
+        )}
       </div>
     </div>
   );

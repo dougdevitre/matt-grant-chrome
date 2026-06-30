@@ -46,12 +46,32 @@ POST /auth/token   { "sessionToken": "<clerk session jwt>" }
 For admin-only SMS, the same Clerk session token is re-presented to `POST /auth/step-up` to
 mint the short-lived `X-StepUp-Token`.
 
-> The extension sign-in screen (`extension/src/components/SignIn.tsx`) now has a **Clerk**
-> mode (default) that takes a session token and posts `{ sessionToken }`, plus the legacy
-> **Dev** mode. SMS step-up is mode-aware: Clerk re-presents the stored session token, dev
-> re-presents the access code. The remaining polish is **auto-acquiring** the Clerk session
-> token client-side via `@clerk/chrome-extension` (publishable key + `ClerkProvider`) instead
-> of providing it manually — the backend and the rest of the sign-in flow already work.
+The extension now **auto-acquires** the session token via `@clerk/chrome-extension`: when a
+publishable key is configured, the Clerk tab renders Clerk's hosted sign-in in the side panel,
+then fetches the session token and exchanges it (no manual paste). SMS step-up is mode-aware:
+Clerk re-presents the stored session token, dev re-presents the access code. Signing out of the
+app also ends the Clerk session. When **no** publishable key is set, the build runs Dev-only and
+the Clerk tab falls back to manual token paste — so local dev and CI need no Clerk.
+
+## Extension setup (in-panel Clerk sign-in)
+
+1. **Publishable key** (public — safe to ship). Set it at build time via Vite env: copy
+   `extension/.env.example` → `extension/.env` and set
+   `VITE_CLERK_PUBLISHABLE_KEY=pk_live_…`, then `npm run build:extension`. Optional
+   `VITE_CLERK_JWT_TEMPLATE=<name>` if you use a JWT template to carry `role` (step 3 above).
+2. **Allow-list the extension origin in Clerk.** Clerk's Frontend API rejects requests from an
+   unknown origin, so add the extension's origin — `chrome-extension://<your-extension-id>` — to
+   the instance's allowed origins (Clerk dashboard / Backend API). The ID is stable only if the
+   manifest has a `key`; add a packed-extension `key` to `extension/public/manifest.json` (and
+   thus a fixed ID) before allow-listing. Until then, re-allow-list whenever the unpacked ID
+   changes.
+3. **Manifest** already ships the Clerk CSP (`script-src 'self' 'wasm-unsafe-eval'`),
+   `host_permissions` for `https://clerk.mattgrantforcongress.org/*`, and the `cookies`
+   permission. Add your **deployed API origin** to `host_permissions` too (the panel fetches the
+   service there).
+4. **Live check:** load `extension/dist` in Chrome, open the side panel, sign in on the Clerk
+   tab, and confirm `GET /me` returns the role's scopes and an SMS step-up re-auths. (This is the
+   one step that can't run from the build sandbox — egress + a registered origin are required.)
 
 ## Verifying
 

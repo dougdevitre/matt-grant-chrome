@@ -12,6 +12,13 @@ vi.mock("../lib/api.js", () => ({
   signInClerk: vi.fn().mockResolvedValue(undefined),
 }));
 
+// Clerk is disabled in tests (no VITE key) so the paste fallback renders; stub
+// the SDK that ClerkSignIn imports so the real package isn't loaded.
+vi.mock("@clerk/chrome-extension", () => ({
+  SignIn: () => null,
+  useAuth: () => ({ isSignedIn: false, getToken: vi.fn() }),
+}));
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
