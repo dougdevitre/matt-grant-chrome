@@ -20,6 +20,11 @@ export const commsRouter = Router();
 const CATEGORIES: TemplateCategory[] = ["register", "plan", "turnout"];
 const CHANNELS: CommsChannel[] = ["email", "sms", "social"];
 
+// idempotencyKey is client-supplied and is later used in an Airtable
+// filterByFormula lookup; constrain it to a safe charset (no quotes/control
+// chars) so it can never break out of the formula literal.
+const IDEMPOTENCY_KEY_RE = /^[A-Za-z0-9._:@+-]{1,200}$/;
+
 interface GuardFail {
   status: number;
   error: string;
@@ -108,6 +113,10 @@ commsRouter.post("/send", requireScope("comms.send"), async (req, res) => {
     res.status(400).json({ error: "missing_fields" });
     return;
   }
+  if (!IDEMPOTENCY_KEY_RE.test(String(b.idempotencyKey))) {
+    res.status(400).json({ error: "invalid_idempotency_key" });
+    return;
+  }
   const store = await getStore();
   const template = await store.getTemplate(String(b.templateId));
   const guard = await smsGuard(req, template);
@@ -139,6 +148,10 @@ commsRouter.post(
     const b = req.body ?? {};
     if (!b.templateId || !b.contactId || !b.idempotencyKey) {
       res.status(400).json({ error: "missing_fields" });
+      return;
+    }
+    if (!IDEMPOTENCY_KEY_RE.test(String(b.idempotencyKey))) {
+      res.status(400).json({ error: "invalid_idempotency_key" });
       return;
     }
     // Registration-only clerks may send register-category templates only.

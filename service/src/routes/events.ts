@@ -79,8 +79,9 @@ eventsRouter.get("/shifts/mine", requireScope("task.read"), async (req, res) => 
   res.json(await myShifts(req.clerk!.clerkId));
 });
 
-// POST /events/shifts/:shiftId/claim — any authenticated clerk may volunteer.
-eventsRouter.post("/shifts/:shiftId/claim", async (req, res) => {
+// POST /events/shifts/:shiftId/claim — any clerk may volunteer (task.read is the
+// baseline every clerk role carries; the voter-facing `public` role cannot).
+eventsRouter.post("/shifts/:shiftId/claim", requireScope("task.read"), async (req, res) => {
   const expectedVersion =
     typeof req.body?.version === "number" ? req.body.version : undefined;
   const result = await claimShift(req.params.shiftId, req.clerk!.clerkId, expectedVersion);

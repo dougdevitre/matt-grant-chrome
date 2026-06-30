@@ -39,7 +39,9 @@ export async function authenticate(
     return;
   }
   try {
-    const payload = jwt.verify(token, secret) as ClerkJwtPayload;
+    // Pin HS256 (the algorithm we mint with) so the verifier can never be
+    // tricked into accepting a token signed with a different scheme.
+    const payload = jwt.verify(token, secret, { algorithms: ["HS256"] }) as ClerkJwtPayload;
     req.clerk = {
       clerkId: payload.sub,
       role: payload.role,

@@ -2,8 +2,9 @@
 // the panel works out of the box. Versioned mutators model optimistic
 // concurrency; a real datastore enforces it for real.
 
-import { randomUUID, createHash } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { contactKeyFor } from "./keys.js";
+import { computeAuditHash } from "./auditChain.js";
 import type {
   StorePort,
   NewTask,
@@ -42,6 +43,7 @@ export function makeMemoryStore(): StorePort {
   const contactLogs: ContactLog[] = [];
   const auditLog: AuditEvent[] = [];
   let lastAuditHash: string | null = null;
+  let nextAuditSeq = 0;
 
   const store: StorePort = {
     async listTasks() {
@@ -183,13 +185,12 @@ export function makeMemoryStore(): StorePort {
 
     async appendAudit(evt) {
       // Tamper-evident chain: each entry's hash covers its content + the prior
-      // hash, so any later edit/deletion breaks the chain on verification.
+      // hash, so any later edit/deletion/reorder breaks the chain on verification.
       const prevHash = lastAuditHash;
-      const material = `${prevHash ?? ""}|${evt.id}|${evt.ts}|${evt.clerkId}|${evt.action}|${evt.entity}|${evt.entityId}`;
-      const hash = createHash("sha256").update(material).digest("hex");
-      const chained: AuditEvent = { ...evt, prevHash, hash };
+      const withSeq: AuditEvent = { ...evt, seq: nextAuditSeq++ };
+      const hash = computeAuditHash(prevHash, withSeq);
       lastAuditHash = hash;
-      auditLog.push(chained);
+      auditLog.push({ ...withSeq, prevHash, hash });
     },
     async readAudit() {
       return [...auditLog];

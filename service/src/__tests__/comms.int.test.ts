@@ -104,4 +104,13 @@ describe("SMS send guard", () => {
     expect(res.status).toBe(200);
     expect(res.body.status).toBe("sent");
   });
+
+  it("rejects an idempotency key with unsafe characters (400)", async () => {
+    const res = await request(app)
+      .post("/comms/send")
+      .set("Authorization", bearer(tokenFor("admin")))
+      .send({ templateId, recipient: "+13140000000", idempotencyKey: "bad'key) | TRUE()" });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("invalid_idempotency_key");
+  });
 });

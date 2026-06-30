@@ -21,24 +21,36 @@ const DISPOSITIONS: ContactDisposition[] = [
   "opted_out",
 ];
 
+// Each import row triggers a geocode lookup, so cap rows to bound the outbound
+// work a single request can drive.
+const MAX_IMPORT_ROWS = 5000;
+
+/** Returns an error response object if the CSV is unusable, else null. */
+function csvError(csv: unknown): { status: number; error: string } | null {
+  if (typeof csv !== "string" || !csv.trim()) return { status: 400, error: "missing_csv" };
+  const lines = csv.split(/\r\n|\r|\n/).filter((l) => l.trim()).length;
+  if (lines - 1 > MAX_IMPORT_ROWS) return { status: 413, error: "too_many_rows" };
+  return null;
+}
+
 // POST /contacts/import/preview  { csv }
 contactsRouter.post("/import/preview", requireScope("list.import"), async (req, res) => {
-  const csv = req.body?.csv;
-  if (typeof csv !== "string" || !csv.trim()) {
-    res.status(400).json({ error: "missing_csv" });
+  const err = csvError(req.body?.csv);
+  if (err) {
+    res.status(err.status).json({ error: err.error });
     return;
   }
-  res.json(await previewImport(csv));
+  res.json(await previewImport(req.body.csv));
 });
 
 // POST /contacts/import/commit  { csv }
 contactsRouter.post("/import/commit", requireScope("list.import"), async (req, res) => {
-  const csv = req.body?.csv;
-  if (typeof csv !== "string" || !csv.trim()) {
-    res.status(400).json({ error: "missing_csv" });
+  const err = csvError(req.body?.csv);
+  if (err) {
+    res.status(err.status).json({ error: err.error });
     return;
   }
-  res.status(201).json(await commitImport(csv, req.clerk!.clerkId));
+  res.status(201).json(await commitImport(req.body.csv, req.clerk!.clerkId));
 });
 
 // GET /contacts?zip=&regStatus=

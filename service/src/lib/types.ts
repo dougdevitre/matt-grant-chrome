@@ -181,6 +181,7 @@ export interface AuditEvent {
   entity: "task" | "event" | "shift" | "template" | "send" | "optout";
   entityId: string;
   // Tamper-evident hash chain (filled by the store on append).
+  seq?: number;
   prevHash?: string | null;
   hash?: string;
 }
