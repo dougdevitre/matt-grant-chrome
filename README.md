@@ -72,6 +72,7 @@ npm run build:extension                 # outputs extension/dist
 - Stateless Express app; deploy on Lambda + API Gateway, Fargate, or any Node host.
 - Secrets via SSM SecureString (`/matt-grant-chrome/<env>/JWT_SECRET`, etc.). Least-privilege IAM: read-only `ssm:GetParameter` on that path prefix.
 - Set `ALLOWED_ORIGIN` to the extension origin and front with HTTPS.
+- A root `Dockerfile` ships a slim production image (non-root, `GET /health` for health checks); baseline security headers + `x-powered-by` off are applied globally. Full steps, IAM policy, and the Lambda adapter are in **[`docs/deploy.md`](docs/deploy.md)**; all env vars are in `service/.env.example`.
 
 ## Endpoints (v0.2)
 

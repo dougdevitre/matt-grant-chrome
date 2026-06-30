@@ -14,16 +14,20 @@ import { tasksRouter } from "./routes/tasks.js";
 import { eventsRouter } from "./routes/events.js";
 import { commsRouter } from "./routes/comms.js";
 import { contactsRouter } from "./routes/contacts.js";
+import { securityHeaders } from "./lib/securityHeaders.js";
 
 const app = express();
+app.disable("x-powered-by"); // don't advertise Express
 
+app.use(securityHeaders);
 app.use(express.json({ limit: "256kb" }));
 app.use(express.urlencoded({ extended: false, limit: "64kb" })); // Twilio webhooks
 app.use(
   cors({
     origin: ALLOWED_ORIGIN === "*" ? true : ALLOWED_ORIGIN.split(","),
-    methods: ["GET", "POST", "PATCH"],
-    allowedHeaders: ["Authorization", "Content-Type"],
+    // Only the verbs the API actually uses.
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Authorization", "Content-Type", "X-StepUp-Token", "X-Twilio-Signature"],
   })
 );
 
