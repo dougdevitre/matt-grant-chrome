@@ -80,7 +80,10 @@ and `x-powered-by` is disabled.
 
 ## After deploy
 
-- Point the extension's service URL at the HTTPS endpoint.
+- Point the extension's service URL at the HTTPS endpoint. The extension manifest already grants
+  host access to `https://*.awsapprunner.com/*` (App Runner) and `http://localhost:8787/*`, so an
+  App Runner URL needs no rebuild. Deploying elsewhere? Add that exact origin to the manifest's
+  `host_permissions` and rebuild.
 - If using Twilio, set the Messaging Service inbound webhook to `<url>/twilio/inbound` and set
   `TWILIO_WEBHOOK_URL` to that exact URL (the signature check depends on it).
 - **Multi-instance:** the rate limiter and the **SMS daily cap** are per-process by default.
