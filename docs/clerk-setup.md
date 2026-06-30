@@ -30,6 +30,7 @@ unless `AUTH_DRIVER=clerk` (dev auth is forbidden) and `JWT_SECRET` is set to a 
 | `AUTH_DRIVER` | `clerk` |
 | `CLERK_JWKS_URL` | `<issuer>/.well-known/jwks.json` |
 | `CLERK_ISSUER` | the Clerk issuer URL |
+| `CLERK_AUDIENCE` | *(optional)* if set, tokens must carry this `aud` claim |
 | `JWT_SECRET` | strong secret for the minted scoped JWT (SSM SecureString) **secret** |
 | `TOKEN_TTL_SECONDS` | scoped-token lifetime (default 3600) |
 
