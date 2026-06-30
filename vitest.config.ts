@@ -1,6 +1,9 @@
-// Vitest workspace: two projects with different environments.
+// Vitest config: two projects with different environments.
 //   service   — Node backend (Express), runs in the `node` environment.
 //   extension — React side panel, runs in `jsdom` with testing-library.
+//
+// vitest 4 removed `defineWorkspace`/`vitest.workspace.ts`; projects now live
+// under `test.projects` here.
 //
 // Both workspaces are ESM and use NodeNext-style `.js` import specifiers that
 // actually point at `.ts` sources (e.g. `import { x } from "./config.js"`).
@@ -8,7 +11,7 @@
 // resolver plugin rewrites relative `.js` specifiers to the sibling `.ts` file
 // when one exists. This keeps the production import style untouched.
 
-import { defineWorkspace } from "vitest/config";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import fs from "node:fs";
 import path from "node:path";
@@ -30,24 +33,28 @@ function jsToTsResolver() {
   };
 }
 
-export default defineWorkspace([
-  {
-    plugins: [jsToTsResolver()],
-    test: {
-      name: "service",
-      environment: "node",
-      globals: true,
-      include: ["service/src/**/*.test.ts"],
-    },
+export default defineConfig({
+  test: {
+    projects: [
+      {
+        plugins: [jsToTsResolver()],
+        test: {
+          name: "service",
+          environment: "node",
+          globals: true,
+          include: ["service/src/**/*.test.ts"],
+        },
+      },
+      {
+        plugins: [jsToTsResolver(), react()],
+        test: {
+          name: "extension",
+          environment: "jsdom",
+          globals: true,
+          include: ["extension/src/**/*.test.{ts,tsx}"],
+          setupFiles: ["./extension/test/setup.ts"],
+        },
+      },
+    ],
   },
-  {
-    plugins: [jsToTsResolver(), react()],
-    test: {
-      name: "extension",
-      environment: "jsdom",
-      globals: true,
-      include: ["extension/src/**/*.test.{ts,tsx}"],
-      setupFiles: ["./extension/test/setup.ts"],
-    },
-  },
-]);
+});
