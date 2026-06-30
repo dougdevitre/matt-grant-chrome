@@ -12,8 +12,10 @@ review, and the residual risks an operator must own before go-live.
   Scopes are always derived server-side from the role — never trusted from the token.
 - **RBAC:** least-privilege role→scope matrix (`service/src/rbac.ts`); every mutating route is
   scope-gated. SMS is admin-only and additionally requires a step-up token bound to the caller.
-- **SMS:** kill switch + daily cap, per-clerk rate limit, consent enforced, opaque recipient
-  keys, PII-safe logging (phone masked, body never logged).
+- **SMS:** kill switch + daily cap, per-clerk rate limit, consent enforced, TCPA quiet-hours
+  enforced (no sends outside an allowed local-time window — default 8am–9pm, recipient-local where
+  the contact's zip permits, else `SMS_QUIET_TZ`; ON by default), opaque recipient keys, PII-safe
+  logging (phone masked, body never logged).
 - **Twilio inbound:** HMAC-SHA1 signature verified with `timingSafeEqual` against the
   configured webhook URL (not the request Host); fails closed if the token/URL is unset.
 - **Audit:** tamper-evident SHA-256 hash chain built by **every** store adapter (memory and
@@ -61,6 +63,10 @@ review, and the residual risks an operator must own before go-live.
   `REDIS_URL` (and `REQUIRE_SHARED_STATE=true` to enforce it) — otherwise the SMS cap multiplies
   per instance. The audit chain is shared via Airtable in `airtable` mode (each append reads the
   latest row), so it is not in this set.
+- **Quiet-hours recipient-local time** is inferred from the contact's zip (a small US-band
+  prefix map), defaulting to `SMS_QUIET_TZ` when unknown. This is exact for MO-02 (all Central)
+  but best-effort for stray out-of-district numbers; for nationwide sending, source a real
+  zip/phone→timezone dataset. `/comms/send` (raw recipient, no contact) always uses the default tz.
 - **Provider error bodies** are truncated into error strings for logs; treat logs as
   potentially PII-bearing and scope log access accordingly.
 

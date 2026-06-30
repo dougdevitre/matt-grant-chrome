@@ -8,6 +8,8 @@ import {
   skipTask,
   type TaskActionResult,
 } from "../lib/tasks.js";
+import { pathParam, queryStr } from "../lib/http.js";
+import { parsePageParams, applyPage } from "../lib/pagination.js";
 
 export const tasksRouter = Router();
 
@@ -29,11 +31,13 @@ function send(res: Response, result: TaskActionResult): void {
   res.status(STATUS_FOR[result.code] ?? 400).json({ error: result.code });
 }
 
-// GET /tasks?zip= — next-best-action queue for this clerk.
+// GET /tasks?zip=&limit=&offset= — next-best-action queue for this clerk.
 tasksRouter.get("/", requireScope("task.read"), async (req, res) => {
   const clerk = req.clerk!;
-  const zip = typeof req.query.zip === "string" ? req.query.zip : null;
-  res.json(await buildQueue(clerk.clerkId, clerk.scopes, { zip }));
+  const zip = queryStr(req, "zip");
+  const all = await buildQueue(clerk.clerkId, clerk.scopes, { zip });
+  res.setHeader("X-Total-Count", String(all.length));
+  res.json(applyPage(all, parsePageParams(req)));
 });
 
 // POST /tasks/:id/claim
@@ -41,18 +45,18 @@ tasksRouter.post("/:id/claim", requireScope("task.read"), async (req, res) => {
   const clerk = req.clerk!;
   const expectedVersion =
     typeof req.body?.version === "number" ? req.body.version : undefined;
-  send(res, await claimTask(req.params.id, clerk.clerkId, clerk.scopes, expectedVersion));
+  send(res, await claimTask(pathParam(req, "id"), clerk.clerkId, clerk.scopes, expectedVersion));
 });
 
 // POST /tasks/:id/complete
 tasksRouter.post("/:id/complete", requireScope("task.write"), async (req, res) => {
   const clerk = req.clerk!;
-  send(res, await completeTask(req.params.id, clerk.clerkId, clerk.scopes));
+  send(res, await completeTask(pathParam(req, "id"), clerk.clerkId, clerk.scopes));
 });
 
 // POST /tasks/:id/skip  { reason?: string }
 tasksRouter.post("/:id/skip", requireScope("task.write"), async (req, res) => {
   const clerk = req.clerk!;
   const reason = typeof req.body?.reason === "string" ? req.body.reason : null;
-  send(res, await skipTask(req.params.id, clerk.clerkId, reason));
+  send(res, await skipTask(pathParam(req, "id"), clerk.clerkId, reason));
 });

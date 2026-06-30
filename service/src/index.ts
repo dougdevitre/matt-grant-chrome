@@ -43,6 +43,8 @@ app.use(
     // Only the verbs the API actually uses.
     methods: ["GET", "POST"],
     allowedHeaders: ["Authorization", "Content-Type", "X-StepUp-Token", "X-Twilio-Signature"],
+    // Let paginating clients read the total separately from the (sliced) body.
+    exposedHeaders: ["X-Total-Count"],
   })
 );
 

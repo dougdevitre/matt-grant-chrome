@@ -266,6 +266,7 @@ export async function makeAirtableStore(): Promise<StorePort> {
       const c: Contact = {
         ...input,
         id: randomUUID(),
+        version: 0,
         createdAt: now(),
         updatedAt: now(),
       };

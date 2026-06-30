@@ -25,7 +25,7 @@ export type NewTemplate = Omit<
   MessageTemplate,
   "id" | "complianceApprovalId" | "createdAt" | "updatedAt"
 >;
-export type NewContact = Omit<Contact, "id" | "createdAt" | "updatedAt">;
+export type NewContact = Omit<Contact, "id" | "version" | "createdAt" | "updatedAt">;
 export type NewContactLog = Omit<ContactLog, "id" | "createdAt">;
 
 export interface ContactFilter {

@@ -66,6 +66,22 @@ export async function assertSecureStartup(): Promise<string[]> {
     ]) {
       if (!(await getConfig(k))) problems.push(`SMS_DRIVER=twilio but ${k} is missing`);
     }
+    // TCPA quiet hours: a typo that silently disables the window is a compliance
+    // risk, so when SMS is live and enforcement is on the bounds must parse and
+    // be ordered (0 <= start < end <= 24).
+    if ((process.env.SMS_QUIET_ENABLED ?? "true").toLowerCase() !== "false") {
+      const start = Number(process.env.SMS_QUIET_START ?? "8");
+      const end = Number(process.env.SMS_QUIET_END ?? "21");
+      if (
+        !Number.isInteger(start) ||
+        !Number.isInteger(end) ||
+        start < 0 ||
+        end > 24 ||
+        start >= end
+      ) {
+        problems.push("SMS_QUIET_START/SMS_QUIET_END must be integers with 0 <= start < end <= 24");
+      }
+    }
   }
   if ((process.env.STORE_DRIVER ?? "memory") === "airtable") {
     if (!(await getConfig("AIRTABLE_PAT"))) {

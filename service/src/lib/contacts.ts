@@ -225,6 +225,12 @@ export async function commitImport(
 
 // --- dispositions + opt-out --------------------------------------------------
 
+/** Result of a versioned contact mutation. `version_conflict` mirrors the
+ *  task/shift optimistic-lock contract so routes can map it to 409. */
+export type ContactWriteResult =
+  | { ok: true }
+  | { ok: false; code: "not_found" | "version_conflict" };
+
 export async function logDisposition(
   contactId: string,
   clerkId: string,
@@ -244,11 +250,21 @@ export async function logDisposition(
     note,
   });
 
-  // Reflect terminal dispositions onto the contact.
+  // Reflect terminal dispositions onto the contact (bumping its version).
   if (disposition === "registered") {
-    await store.putContact({ ...contact, regStatus: "registered", updatedAt: new Date().toISOString() });
+    await store.putContact({
+      ...contact,
+      regStatus: "registered",
+      version: contact.version + 1,
+      updatedAt: new Date().toISOString(),
+    });
   } else if (disposition === "opted_out") {
-    await store.putContact({ ...contact, optOut: true, updatedAt: new Date().toISOString() });
+    await store.putContact({
+      ...contact,
+      optOut: true,
+      version: contact.version + 1,
+      updatedAt: new Date().toISOString(),
+    });
     await store.addOptOut(contact.contactKey);
   }
   return log;
@@ -256,15 +272,23 @@ export async function logDisposition(
 
 export async function optOutContact(
   contactId: string,
-  clerkId: string
-): Promise<boolean> {
+  clerkId: string,
+  expectedVersion?: number
+): Promise<ContactWriteResult> {
   const store = await getStore();
   const contact = await store.getContact(contactId);
-  if (!contact) return false;
-  await store.putContact({ ...contact, optOut: true, updatedAt: new Date().toISOString() });
+  if (!contact) return { ok: false, code: "not_found" };
+  if (expectedVersion != null && expectedVersion !== contact.version)
+    return { ok: false, code: "version_conflict" };
+  await store.putContact({
+    ...contact,
+    optOut: true,
+    version: contact.version + 1,
+    updatedAt: new Date().toISOString(),
+  });
   await store.addOptOut(contact.contactKey);
   await audit(store, clerkId, "contact.optout", "optout", contactId);
-  return true;
+  return { ok: true };
 }
 
 /**
@@ -276,11 +300,14 @@ export async function recordConsent(
   channel: "sms" | "email",
   consented: boolean,
   clerkId: string,
-  sourceNote: string | null
-): Promise<boolean> {
+  sourceNote: string | null,
+  expectedVersion?: number
+): Promise<ContactWriteResult> {
   const store = await getStore();
   const contact = await store.getContact(contactId);
-  if (!contact) return false;
+  if (!contact) return { ok: false, code: "not_found" };
+  if (expectedVersion != null && expectedVersion !== contact.version)
+    return { ok: false, code: "version_conflict" };
   const now = new Date().toISOString();
   const updated = {
     ...contact,
@@ -288,9 +315,10 @@ export async function recordConsent(
     consentEmail: channel === "email" ? consented : contact.consentEmail,
     consentSource: consented ? `${clerkId}${sourceNote ? `:${sourceNote}` : ""}` : contact.consentSource,
     consentAt: consented ? now : contact.consentAt,
+    version: contact.version + 1,
     updatedAt: now,
   };
   await store.putContact(updated);
   await audit(store, clerkId, consented ? "contact.consent" : "contact.consent_revoke", "optout", contactId);
-  return true;
+  return { ok: true };
 }

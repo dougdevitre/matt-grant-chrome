@@ -7,6 +7,8 @@ import {
   listEvents,
   myShifts,
 } from "../lib/scheduling.js";
+import { pathParam, queryStr } from "../lib/http.js";
+import { parsePageParams, applyPage } from "../lib/pagination.js";
 import type { EventKind, Phase } from "../lib/types.js";
 
 export const eventsRouter = Router();
@@ -18,11 +20,13 @@ const VALID_KINDS: EventKind[] = [
   "early_vote_reminder",
 ];
 
-// GET /events?county=&zip= — phase-filtered events with their shifts.
+// GET /events?county=&zip=&limit=&offset= — phase-filtered events with shifts.
 eventsRouter.get("/", requireScope("voter.read"), async (req, res) => {
-  const county = typeof req.query.county === "string" ? req.query.county : null;
-  const zip = typeof req.query.zip === "string" ? req.query.zip : null;
-  res.json(await listEvents({ county, zip }));
+  const county = queryStr(req, "county");
+  const zip = queryStr(req, "zip");
+  const all = await listEvents({ county, zip });
+  res.setHeader("X-Total-Count", String(all.length));
+  res.json(applyPage(all, parsePageParams(req)));
 });
 
 // POST /events — Events Clerk creates a drive/canvass/phone bank.
@@ -59,7 +63,7 @@ eventsRouter.post("/:id/shifts", requireScope("events.write"), async (req, res) 
   }
   const shift = await addShift(
     {
-      eventId: req.params.id,
+      eventId: pathParam(req, "id"),
       role: String(b.role),
       startsAt: String(b.startsAt),
       endsAt: String(b.endsAt),
@@ -84,7 +88,7 @@ eventsRouter.get("/shifts/mine", requireScope("task.read"), async (req, res) => 
 eventsRouter.post("/shifts/:shiftId/claim", requireScope("task.read"), async (req, res) => {
   const expectedVersion =
     typeof req.body?.version === "number" ? req.body.version : undefined;
-  const result = await claimShift(req.params.shiftId, req.clerk!.clerkId, expectedVersion);
+  const result = await claimShift(pathParam(req, "shiftId"), req.clerk!.clerkId, expectedVersion);
   if (result.ok) {
     res.json(result.shift);
     return;

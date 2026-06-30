@@ -13,7 +13,9 @@ import { getConfig } from "../config.js";
 import { verifyStepUp } from "../lib/identity.js";
 import { canSendSms, recordSmsSent } from "../lib/smsBudget.js";
 import { rateAllow } from "../lib/ratelimit.js";
-import type { CommsChannel, MessageTemplate, TemplateCategory } from "../lib/types.js";
+import { quietHoursConfig, tzForContact, isQuietHours } from "../lib/quietHours.js";
+import { pathParam } from "../lib/http.js";
+import type { Contact, CommsChannel, MessageTemplate, TemplateCategory } from "../lib/types.js";
 
 export const commsRouter = Router();
 
@@ -33,11 +35,15 @@ interface GuardFail {
 /**
  * Layered safeguard for SMS-channel sends. Returns null if allowed, or a
  * {status,error} to reject. Order: kill switch / budget -> admin scope ->
- * step-up re-auth -> per-clerk rate limit.
+ * step-up re-auth -> per-clerk rate limit -> TCPA quiet hours.
+ *
+ * `contact` (when known) lets quiet-hours use the recipient's local timezone;
+ * absent it, the campaign default timezone is used.
  */
 async function smsGuard(
   req: Request,
-  template: MessageTemplate | undefined
+  template: MessageTemplate | undefined,
+  contact?: Contact
 ): Promise<GuardFail | null> {
   if (!template || template.channel !== "sms") return null;
 
@@ -54,6 +60,12 @@ async function smsGuard(
   }
   if (!(await rateAllow(`sms:${req.clerk!.clerkId}`, 30, 60_000))) {
     return { status: 429, error: "rate_limited" };
+  }
+  // TCPA: no texts outside the allowed local-time window (default 8am–9pm
+  // Central). Recipient-local where the contact's zip lets us infer it.
+  const qh = quietHoursConfig();
+  if (qh.enabled && isQuietHours(new Date(), tzForContact(contact, qh.tz), qh.startHour, qh.endHour)) {
+    return { status: 403, error: "quiet_hours" };
   }
   return null;
 }
@@ -96,7 +108,7 @@ commsRouter.post(
   requireScope("comms.approve"),
   async (req, res) => {
     const approve = req.body?.approve !== false; // default true
-    const result = await approveTemplate(req.params.id, approve, req.clerk!.clerkId);
+    const result = await approveTemplate(pathParam(req, "id"), approve, req.clerk!.clerkId);
     if (result.ok) {
       res.json(result.template);
       return;
@@ -163,8 +175,10 @@ commsRouter.post(
         return;
       }
     }
-    // SMS sends face the full admin/step-up/budget/rate guard.
-    const guard = await smsGuard(req, t);
+    // SMS sends face the full admin/step-up/budget/rate/quiet-hours guard.
+    // Resolve the contact first so quiet-hours can use its recipient-local tz.
+    const contact = await store.getContact(String(b.contactId));
+    const guard = await smsGuard(req, t, contact);
     if (guard) {
       res.status(guard.status).json({ error: guard.error });
       return;

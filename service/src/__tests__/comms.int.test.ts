@@ -8,7 +8,11 @@ import { app } from "../index.js";
 import { resetStoreForTests } from "../lib/store.js";
 import { TEST_JWT_SECRET, tokenFor, stepUpToken, bearer } from "./helpers.js";
 
-const PHASE1 = new Date("2026-07-01T12:00:00Z"); // register category sends are valid here
+// Register-category sends are valid in this phase. 18:00Z is 13:00 (1pm) in
+// America/Chicago — inside the default TCPA quiet-hours window (8am–9pm), so the
+// "happy path" sends are not blocked on time-of-day. Quiet-hours rejection is
+// exercised explicitly below by moving the clock to the small hours.
+const PHASE1 = new Date("2026-07-01T18:00:00Z");
 
 // Approved register-category SMS template: carries the "Paid for by" disclaimer
 // and STOP opt-out language so approval succeeds.
@@ -112,5 +116,35 @@ describe("SMS send guard", () => {
       .send({ templateId, recipient: "+13140000000", idempotencyKey: "bad'key) | TRUE()" });
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("invalid_idempotency_key");
+  });
+});
+
+describe("SMS quiet hours (TCPA)", () => {
+  afterEach(() => {
+    delete process.env.SMS_QUIET_ENABLED;
+  });
+
+  it("blocks an SMS send in the recipient's small hours (403 quiet_hours)", async () => {
+    // 07:00Z on Jul 1 is 02:00 in America/Chicago — before the 8am window.
+    vi.setSystemTime(new Date("2026-07-01T07:00:00Z"));
+    const res = await request(app)
+      .post("/comms/send-to-contact")
+      .set("Authorization", bearer(tokenFor("admin")))
+      .set("X-StepUp-Token", stepUpToken())
+      .send({ templateId, contactId: averyId, idempotencyKey: "k-quiet" });
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe("quiet_hours");
+  });
+
+  it("allows the same send once quiet hours are disabled", async () => {
+    process.env.SMS_QUIET_ENABLED = "false";
+    vi.setSystemTime(new Date("2026-07-01T07:00:00Z"));
+    const res = await request(app)
+      .post("/comms/send-to-contact")
+      .set("Authorization", bearer(tokenFor("admin")))
+      .set("X-StepUp-Token", stepUpToken())
+      .send({ templateId, contactId: averyId, idempotencyKey: "k-quiet-off" });
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe("sent");
   });
 });

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import type { Response } from "express";
 import { requireScope } from "../auth.js";
 import {
   commitImport,
@@ -8,6 +9,8 @@ import {
   recordConsent,
 } from "../lib/contacts.js";
 import { getStore } from "../lib/store.js";
+import { pathParam, queryStr } from "../lib/http.js";
+import { parsePageParams, applyPage } from "../lib/pagination.js";
 import type { ContactDisposition, RegStatus } from "../lib/types.js";
 
 export const contactsRouter = Router();
@@ -53,21 +56,21 @@ contactsRouter.post("/import/commit", requireScope("list.import"), async (req, r
   res.status(201).json(await commitImport(req.body.csv, req.clerk!.clerkId));
 });
 
-// GET /contacts?zip=&regStatus=
+// GET /contacts?zip=&regStatus=&limit=&offset=
 contactsRouter.get("/", requireScope("voter.read"), async (req, res) => {
   const store = await getStore();
-  const zip = typeof req.query.zip === "string" ? req.query.zip : null;
-  const regStatus =
-    typeof req.query.regStatus === "string"
-      ? (req.query.regStatus as RegStatus)
-      : null;
-  res.json(await store.listContacts({ zip, regStatus }));
+  const zip = queryStr(req, "zip");
+  const rs = queryStr(req, "regStatus");
+  const regStatus = rs ? (rs as RegStatus) : null;
+  const all = await store.listContacts({ zip, regStatus });
+  res.setHeader("X-Total-Count", String(all.length));
+  res.json(applyPage(all, parsePageParams(req)));
 });
 
 // GET /contacts/:id
 contactsRouter.get("/:id", requireScope("voter.read"), async (req, res) => {
   const store = await getStore();
-  const contact = await store.getContact(req.params.id);
+  const contact = await store.getContact(pathParam(req, "id"));
   if (!contact) {
     res.status(404).json({ error: "not_found" });
     return;
@@ -87,7 +90,7 @@ contactsRouter.post("/:id/logs", requireScope("contact.log"), async (req, res) =
     ? b.channel
     : "call";
   const log = await logDisposition(
-    req.params.id,
+    pathParam(req, "id"),
     req.clerk!.clerkId,
     channel,
     b.disposition,
@@ -100,32 +103,48 @@ contactsRouter.post("/:id/logs", requireScope("contact.log"), async (req, res) =
   res.status(201).json(log);
 });
 
-// POST /contacts/:id/optout
-contactsRouter.post("/:id/optout", requireScope("optout.manage"), async (req, res) => {
-  const ok = await optOutContact(req.params.id, req.clerk!.clerkId);
-  if (!ok) {
+// Map a versioned-write failure to an HTTP response (404 or 409 conflict).
+function sendContactWriteError(
+  res: Response,
+  code: "not_found" | "version_conflict"
+): void {
+  if (code === "not_found") {
     res.status(404).json({ error: "contact_not_found" });
+  } else {
+    res.status(409).json({ error: "version_conflict" });
+  }
+}
+
+// POST /contacts/:id/optout  { version? }
+contactsRouter.post("/:id/optout", requireScope("optout.manage"), async (req, res) => {
+  const expectedVersion =
+    typeof req.body?.version === "number" ? req.body.version : undefined;
+  const result = await optOutContact(pathParam(req, "id"), req.clerk!.clerkId, expectedVersion);
+  if (!result.ok) {
+    sendContactWriteError(res, result.code);
     return;
   }
   res.status(201).json({ status: "opted_out" });
 });
 
-// POST /contacts/:id/consent  { channel: "sms"|"email", consented: boolean, note? }
+// POST /contacts/:id/consent  { channel: "sms"|"email", consented: boolean, note?, version? }
 contactsRouter.post("/:id/consent", requireScope("contact.log"), async (req, res) => {
   const b = req.body ?? {};
   if (b.channel !== "sms" && b.channel !== "email") {
     res.status(400).json({ error: "invalid_channel" });
     return;
   }
-  const ok = await recordConsent(
-    req.params.id,
+  const expectedVersion = typeof b.version === "number" ? b.version : undefined;
+  const result = await recordConsent(
+    pathParam(req, "id"),
     b.channel,
     b.consented !== false,
     req.clerk!.clerkId,
-    typeof b.note === "string" ? b.note : null
+    typeof b.note === "string" ? b.note : null,
+    expectedVersion
   );
-  if (!ok) {
-    res.status(404).json({ error: "contact_not_found" });
+  if (!result.ok) {
+    sendContactWriteError(res, result.code);
     return;
   }
   res.status(201).json({ status: "consent_recorded" });
