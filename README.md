@@ -160,7 +160,9 @@ v0.6 scaffold. **Live and smoke-tested:**
 
 Public-data clients (Census geocoder + ACS demographics, FEC race finance, OSM venues, DESE district profile) are implemented server-side with timeouts and graceful nulls, and covered by deterministic mocked-fetch tests (`service/src/__tests__/publicData.test.ts`). They were not live-verified from the build sandbox (egress is allowlist-restricted); ACS/OSM venue enrichment attaches to `/location/resolve` only when `ENRICH_RESOLVE=true`.
 
-Still to do: live Clerk app + Airtable/Calendar/Gmail against real providers. The Airtable adapter is hardened + tested (`docs/airtable-setup.md`) and the Google Calendar/Gmail adapters now use a service-account OAuth flow with token refresh (`docs/google-oauth-setup.md`) — all three are code-complete + tested, pending live credentials. Remaining: deploy + CORS/secrets lockdown, and a live run of the public-data clients against real endpoints.
+Providers are code-complete + tested, pending live credentials: Clerk auth (`docs/clerk-setup.md`), Airtable storage (`docs/airtable-setup.md`), and Google Calendar/Gmail via service-account OAuth with token refresh (`docs/google-oauth-setup.md`). The deploy path is in place — root `Dockerfile` + `docs/deploy.md`, with security headers, pinned CORS, and the refuse-to-boot guard.
+
+Still to do: stand up the live Clerk/Airtable/Google/Twilio accounts and flip their drivers on; wire the real Clerk sign-in UI into the extension (the backend already accepts `{ sessionToken }`); and a live run of the public-data clients against real endpoints (egress is allowlist-restricted in the build sandbox).
 
 ## Tests & CI
 
