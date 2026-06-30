@@ -1,39 +1,14 @@
-// Simple in-memory sliding-window rate limiter. Swap for Redis in production
-// (multi-instance). Used to blunt brute-force on auth and abuse of SMS sends.
+// Rate limiting backed by the shared counter port (memory by default, Redis when
+// REDIS_URL is set), so per-IP/clerk limits hold across instances. Used to blunt
+// brute-force on auth and abuse of SMS sends.
 
 import type { NextFunction, Request, Response } from "express";
-
-interface Bucket {
-  hits: number[];
-}
-
-const buckets = new Map<string, Bucket>();
-
-// Bound the map so a client churning distinct keys can't grow it without limit;
-// when over the cap, evict buckets with no recent activity.
-const BUCKET_CAP = 50_000;
-const MAX_IDLE_MS = 600_000; // longest window we use
-
-function sweep(now: number): void {
-  if (buckets.size <= BUCKET_CAP) return;
-  for (const [k, b] of buckets) {
-    const last = b.hits[b.hits.length - 1] ?? 0;
-    if (now - last > MAX_IDLE_MS) buckets.delete(k);
-  }
-}
+import { getCounter } from "./counter.js";
 
 /** Returns true if the action is allowed (and records the hit). */
-export function allow(key: string, max: number, windowMs: number, now = Date.now()): boolean {
-  const b = buckets.get(key) ?? { hits: [] };
-  b.hits = b.hits.filter((t) => now - t < windowMs);
-  if (b.hits.length >= max) {
-    buckets.set(key, b);
-    return false;
-  }
-  b.hits.push(now);
-  buckets.set(key, b);
-  sweep(now);
-  return true;
+export async function rateAllow(key: string, max: number, windowMs: number): Promise<boolean> {
+  const counter = await getCounter();
+  return counter.allowN(key, max, windowMs);
 }
 
 /** Express middleware: rate-limit by a key function (IP or clerk id). */
@@ -43,9 +18,9 @@ export function rateLimit(opts: {
   keyOf: (req: Request) => string;
   scope: string;
 }) {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const key = `${opts.scope}:${opts.keyOf(req)}`;
-    if (!allow(key, opts.max, opts.windowMs)) {
+    if (!(await rateAllow(key, opts.max, opts.windowMs))) {
       res.status(429).json({ error: "rate_limited" });
       return;
     }
