@@ -12,7 +12,7 @@ import { getStore } from "../lib/store.js";
 import { getConfig } from "../config.js";
 import { verifyStepUp } from "../lib/identity.js";
 import { canSendSms, recordSmsSent } from "../lib/smsBudget.js";
-import { allow } from "../lib/ratelimit.js";
+import { rateAllow } from "../lib/ratelimit.js";
 import type { CommsChannel, MessageTemplate, TemplateCategory } from "../lib/types.js";
 
 export const commsRouter = Router();
@@ -41,7 +41,7 @@ async function smsGuard(
 ): Promise<GuardFail | null> {
   if (!template || template.channel !== "sms") return null;
 
-  const budget = canSendSms();
+  const budget = await canSendSms();
   if (!budget.ok) {
     return { status: budget.reason === "sms_disabled" ? 503 : 429, error: budget.reason! };
   }
@@ -52,7 +52,7 @@ async function smsGuard(
   if (!secret || !verifyStepUp(req.header("x-stepup-token"), req.clerk!.clerkId, secret)) {
     return { status: 401, error: "step_up_required" };
   }
-  if (!allow(`sms:${req.clerk!.clerkId}`, 30, 60_000)) {
+  if (!(await rateAllow(`sms:${req.clerk!.clerkId}`, 30, 60_000))) {
     return { status: 429, error: "rate_limited" };
   }
   return null;
@@ -131,7 +131,7 @@ commsRouter.post("/send", requireScope("comms.send"), async (req, res) => {
     req.clerk!.clerkId
   );
   if (result.ok) {
-    if (template?.channel === "sms") recordSmsSent();
+    if (template?.channel === "sms") await recordSmsSent();
     res.json({ status: "sent", outbox: result.outbox });
     return;
   }
@@ -176,7 +176,7 @@ commsRouter.post(
       req.clerk!.clerkId
     );
     if (result.ok) {
-      if (t?.channel === "sms") recordSmsSent();
+      if (t?.channel === "sms") await recordSmsSent();
       res.json({ status: "sent", outbox: result.outbox });
       return;
     }

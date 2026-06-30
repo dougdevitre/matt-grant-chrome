@@ -56,8 +56,11 @@ review, and the residual risks an operator must own before go-live.
   if the endpoint ever does more.
 - **Secrets backend.** `getConfig` falls back from SSM to env vars; nothing forces SSM use. If
   SSM SecureString is a compliance requirement, enforce `SSM_PREFIX` in production.
-- **Single-instance rate limiting + audit chain.** Both are per-process; a multi-instance
-  deployment needs a shared store (e.g. Redis) and a durable audit log.
+- **Multi-instance shared state.** The rate limiter and SMS daily cap use the shared counter:
+  per-process memory by default, Redis when `REDIS_URL` is set. Run multi-instance **only** with
+  `REDIS_URL` (and `REQUIRE_SHARED_STATE=true` to enforce it) — otherwise the SMS cap multiplies
+  per instance. The audit chain is shared via Airtable in `airtable` mode (each append reads the
+  latest row), so it is not in this set.
 - **Provider error bodies** are truncated into error strings for logs; treat logs as
   potentially PII-bearing and scope log access accordingly.
 

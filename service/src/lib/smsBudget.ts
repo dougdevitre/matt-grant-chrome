@@ -1,8 +1,11 @@
-// SMS operational safeguards: a global kill switch and a daily send cap so a
-// bug or abuse can't drain the Twilio balance. Counts reset per calendar day.
+// SMS operational safeguards: a global kill switch and a daily send cap so a bug
+// or abuse can't drain the Twilio balance. The cap is backed by the shared
+// counter (memory by default, Redis when REDIS_URL is set) so it holds across
+// instances — otherwise N instances would each allow up to the cap.
 
-let day = "";
-let count = 0;
+import { getCounter } from "./counter.js";
+
+const SMS_COUNTER_KEY = "sms";
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -19,29 +22,35 @@ function dailyCap(): number {
 }
 
 /** Check whether another SMS may be sent right now. */
-export function canSendSms(): { ok: boolean; reason?: "sms_disabled" | "sms_cap_reached" } {
+export async function canSendSms(): Promise<{
+  ok: boolean;
+  reason?: "sms_disabled" | "sms_cap_reached";
+}> {
   if (!smsEnabled()) return { ok: false, reason: "sms_disabled" };
-  if (today() !== day) {
-    day = today();
-    count = 0;
-  }
-  if (count >= dailyCap()) return { ok: false, reason: "sms_cap_reached" };
+  const counter = await getCounter();
+  const sent = await counter.dailyCount(SMS_COUNTER_KEY, today());
+  if (sent >= dailyCap()) return { ok: false, reason: "sms_cap_reached" };
   return { ok: true };
 }
 
 /** Record a successful send against the daily cap. */
-export function recordSmsSent(): void {
-  if (today() !== day) {
-    day = today();
-    count = 0;
-  }
-  count++;
+export async function recordSmsSent(): Promise<void> {
+  const counter = await getCounter();
+  await counter.dailyIncr(SMS_COUNTER_KEY, today());
 }
 
-export function smsBudgetStatus(): { day: string; sent: number; cap: number; enabled: boolean } {
-  if (today() !== day) {
-    day = today();
-    count = 0;
-  }
-  return { day, sent: count, cap: dailyCap(), enabled: smsEnabled() };
+export async function smsBudgetStatus(): Promise<{
+  day: string;
+  sent: number;
+  cap: number;
+  enabled: boolean;
+}> {
+  const counter = await getCounter();
+  const day = today();
+  return {
+    day,
+    sent: await counter.dailyCount(SMS_COUNTER_KEY, day),
+    cap: dailyCap(),
+    enabled: smsEnabled(),
+  };
 }

@@ -80,5 +80,8 @@ and `x-powered-by` is disabled.
 - Point the extension's service URL at the HTTPS endpoint.
 - If using Twilio, set the Messaging Service inbound webhook to `<url>/twilio/inbound` and set
   `TWILIO_WEBHOOK_URL` to that exact URL (the signature check depends on it).
-- The in-memory rate limiter is per-instance; for multi-instance deployments move it to a
-  shared store (Redis) so limits are global.
+- **Multi-instance:** the rate limiter and the **SMS daily cap** are per-process by default.
+  Running more than one instance without a shared backend multiplies them — most importantly the
+  SMS cap (N instances → N× the spend ceiling). Set `REDIS_URL` so both use Redis, and set
+  `REQUIRE_SHARED_STATE=true` to make the service refuse to boot multi-instance without it. A
+  single instance needs neither.

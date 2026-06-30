@@ -19,6 +19,8 @@ const TOUCHED = [
   "GOOGLE_SA_PRIVATE_KEY",
   "GOOGLE_CALENDAR_TOKEN",
   "GMAIL_TOKEN",
+  "REQUIRE_SHARED_STATE",
+  "REDIS_URL",
   "SSM_PREFIX",
   "TWILIO_ACCOUNT_SID",
   "TWILIO_AUTH_TOKEN",
@@ -131,6 +133,17 @@ describe("assertSecureStartup", () => {
     const problems = await runStartup({ ...CLEAN, MAILER_DRIVER: "gmail" });
     expect(problems.some((p) => p.includes("MAILER_DRIVER"))).toBe(true);
     const ok = await runStartup({ ...CLEAN, MAILER_DRIVER: "gmail", GMAIL_TOKEN: "tok" });
+    expect(ok).toEqual([]);
+  });
+
+  it("flags REQUIRE_SHARED_STATE without REDIS_URL", async () => {
+    const problems = await runStartup({ ...CLEAN, REQUIRE_SHARED_STATE: "true" });
+    expect(problems.some((p) => p.includes("REDIS_URL"))).toBe(true);
+    const ok = await runStartup({
+      ...CLEAN,
+      REQUIRE_SHARED_STATE: "true",
+      REDIS_URL: "redis://localhost:6379",
+    });
     expect(ok).toEqual([]);
   });
 });

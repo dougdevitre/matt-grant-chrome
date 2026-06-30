@@ -1,8 +1,10 @@
-// Rate-limit IP resolution must not trust a raw X-Forwarded-For header (a client
-// could forge it to rotate past the per-IP caps); it relies on Express's req.ip.
+// clientIp must not trust a raw X-Forwarded-For header (forgeable to rotate past
+// the caps); it relies on Express's req.ip. rateAllow is backed by the shared
+// counter (memory by default).
 
-import { describe, expect, it } from "vitest";
-import { allow, clientIp } from "../lib/ratelimit.js";
+import { beforeEach, describe, expect, it } from "vitest";
+import { clientIp, rateAllow } from "../lib/ratelimit.js";
+import { resetCounterForTests } from "../lib/counter.js";
 import type { Request } from "express";
 
 function fakeReq(opts: { ip?: string; remote?: string; xff?: string }): Request {
@@ -13,9 +15,10 @@ function fakeReq(opts: { ip?: string; remote?: string; xff?: string }): Request 
   } as unknown as Request;
 }
 
+beforeEach(() => resetCounterForTests());
+
 describe("clientIp", () => {
   it("ignores X-Forwarded-For and uses the socket address when req.ip is unset", () => {
-    // req.ip is undefined when trust proxy is off; XFF must not be trusted.
     expect(clientIp(fakeReq({ remote: "10.0.0.5", xff: "1.2.3.4" }))).toBe("10.0.0.5");
   });
 
@@ -26,14 +29,11 @@ describe("clientIp", () => {
   });
 });
 
-describe("allow", () => {
-  it("permits up to max within the window, then blocks", () => {
-    const key = `test:${Math.random()}`;
-    const now = 1_000_000;
-    expect(allow(key, 2, 1000, now)).toBe(true);
-    expect(allow(key, 2, 1000, now)).toBe(true);
-    expect(allow(key, 2, 1000, now)).toBe(false); // cap reached
-    // Window elapsed → allowed again.
-    expect(allow(key, 2, 1000, now + 2000)).toBe(true);
+describe("rateAllow", () => {
+  it("permits up to max in the window, then blocks", async () => {
+    const key = "auth:1.2.3.4";
+    expect(await rateAllow(key, 2, 60_000)).toBe(true);
+    expect(await rateAllow(key, 2, 60_000)).toBe(true);
+    expect(await rateAllow(key, 2, 60_000)).toBe(false);
   });
 });

@@ -89,5 +89,10 @@ export async function assertSecureStartup(): Promise<string[]> {
       problems.push("MAILER_DRIVER=gmail but no service account (GOOGLE_SA_*) or GMAIL_TOKEN");
     }
   }
+  // Multi-instance deploys must share the rate-limit/SMS-cap counters, else the
+  // SMS daily cap multiplies per instance. Opt in to enforce a shared backend.
+  if (process.env.REQUIRE_SHARED_STATE === "true" && !(await getConfig("REDIS_URL"))) {
+    problems.push("REQUIRE_SHARED_STATE=true but REDIS_URL is missing (counters would be per-instance)");
+  }
   return problems;
 }
