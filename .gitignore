@@ -10,6 +10,10 @@ dist/
 .env
 .env.*
 !.env.example
+extension/.keys/
+
+# packaged extension download (produced at build time)
+service/public/download/
 
 # logs
 *.log

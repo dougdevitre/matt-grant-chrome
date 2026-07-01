@@ -16,7 +16,11 @@ import type {
   Task,
 } from "./types.js";
 
-const DEFAULT_BASE = "http://localhost:8787";
+// Baked in at build time so a downloaded extension talks to the deployed
+// service with no configuration. A value saved in chrome.storage still wins
+// (see getBase). Falls back to localhost for local dev / when unset.
+const DEFAULT_BASE =
+  import.meta.env.VITE_DEFAULT_SERVICE_URL || "http://localhost:8787";
 
 async function getToken(): Promise<string | null> {
   const { authToken } = await chrome.storage.local.get("authToken");
