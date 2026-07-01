@@ -276,3 +276,21 @@ body {
 .chk { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; }
 .chk.ok { color: var(--ok); background: #e7f4ec; }
 .chk.bad { color: var(--accent); background: var(--accent-soft); }
+
+/* Admin-only "View as" role preview */
+.viewas { display: flex; align-items: center; gap: 6px; margin: 8px 0 2px; }
+.viewas-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.viewas-select {
+  font: inherit; font-size: 12px; padding: 4px 8px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+.viewas-select:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.preview-banner {
+  margin: 6px 0 2px; padding: 7px 10px; border-radius: 8px;
+  background: var(--accent-soft); border: 1px solid #f1ddb4;
+  font-size: 12px; color: var(--ink);
+}
+.preview-banner .linklike {
+  font: inherit; font-size: 12px; background: none; border: 0; padding: 0;
+  color: var(--accent); text-decoration: underline; cursor: pointer;
+}

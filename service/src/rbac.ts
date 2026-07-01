@@ -49,6 +49,11 @@ export function scopesForRole(role: Role): Scope[] {
   return ROLE_SCOPES[role] ?? [];
 }
 
+/** Runtime guard: is `v` one of the canonical roles (incl. `public`)? */
+export function isRole(v: unknown): v is Role {
+  return typeof v === "string" && Object.prototype.hasOwnProperty.call(ROLE_SCOPES, v);
+}
+
 export function hasScope(scopes: Scope[], needed: Scope): boolean {
   return scopes.includes(needed);
 }

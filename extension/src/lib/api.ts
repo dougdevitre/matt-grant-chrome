@@ -16,6 +16,7 @@ import type {
   PhaseConfig,
   PollingPlace,
   ResolveResponse,
+  Role,
   Shift,
   Task,
   VoteMethod,
@@ -85,7 +86,10 @@ async function callList<T>(path: string, init?: RequestInit): Promise<Page<T>> {
 }
 
 export const api = {
-  me: () => call<ClerkIdentity>("/me"),
+  // `as` lets an admin preview another role's view (server ignores it for
+  // non-admins). Encoded so a role value can never break the query string.
+  me: (as?: Role) =>
+    call<ClerkIdentity>(as ? `/me?as=${encodeURIComponent(as)}` : "/me"),
   phase: () => call<PhaseConfig>("/phase"),
   resolve: (input: LocationInput) =>
     call<ResolveResponse>("/location/resolve", {

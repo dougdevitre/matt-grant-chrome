@@ -4,6 +4,7 @@
 
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import App from "./App.js";
 import { api } from "./lib/api.js";
 import type { Scope } from "./lib/types.js";
@@ -96,5 +97,70 @@ describe("App tab gating", () => {
     ]);
     expect(screen.getByRole("button", { name: "Comms" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Import" })).not.toBeInTheDocument();
+  });
+});
+
+describe('App "View as" switcher (admin-only)', () => {
+  const ADMIN_SCOPES: Scope[] = [
+    "voter.read",
+    "list.import",
+    "comms.draft",
+    "task.read",
+    "task.write",
+  ];
+  const REG_SCOPES: Scope[] = [
+    "voter.read",
+    "voter.write",
+    "contact.log",
+    "comms.send_registration",
+    "task.read",
+    "task.write",
+  ];
+
+  // Emulate the server: /me?as=<role> returns that role's scopes + viewAs for an
+  // admin; a plain /me returns the admin identity.
+  function mockMeWithPreview() {
+    vi.mocked(api.me).mockImplementation(async (as?: string) => {
+      if (as === "registration_clerk") {
+        return {
+          clerkId: "c1",
+          role: "registration_clerk",
+          scopes: REG_SCOPES,
+          viewAs: true,
+        } as never;
+      }
+      return { clerkId: "c1", role: "admin", scopes: ADMIN_SCOPES } as never;
+    });
+    vi.mocked(api.phase).mockResolvedValue(PHASE as never);
+  }
+
+  it("hides the switcher for a non-admin", async () => {
+    await renderAs("list_data_clerk", ["voter.read", "list.import", "task.read", "task.write"]);
+    expect(screen.queryByRole("combobox", { name: /view as/i })).not.toBeInTheDocument();
+  });
+
+  it("previews a role: reshapes tabs, shows a banner, then restores", async () => {
+    mockMeWithPreview();
+    render(<App />);
+    await screen.findByRole("button", { name: "Local" });
+
+    // Admin sees the switcher + the full tab set.
+    const select = screen.getByRole("combobox", { name: /view as/i });
+    expect(screen.getByRole("button", { name: "Import" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Comms" })).toBeInTheDocument();
+
+    // Preview as Registration Clerk → admin-only tabs disappear, banner appears.
+    await userEvent.selectOptions(select, "registration_clerk");
+    expect(await screen.findByText(/previewing as/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Import" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Comms" })).not.toBeInTheDocument();
+    // The sign-out chip still reports the real role, not the preview.
+    expect(screen.getByRole("button", { name: /Campaign Admin/ })).toBeInTheDocument();
+
+    // Back to my view → full tab set returns, banner gone.
+    await userEvent.click(screen.getByRole("button", { name: /back to my view/i }));
+    expect(await screen.findByRole("button", { name: "Comms" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Import" })).toBeInTheDocument();
+    expect(screen.queryByText(/previewing as/i)).not.toBeInTheDocument();
   });
 });

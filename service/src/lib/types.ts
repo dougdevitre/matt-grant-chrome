@@ -42,6 +42,8 @@ export interface ClerkIdentity {
   clerkId: string;
   role: Role;
   scopes: Scope[];
+  // Set when an admin is previewing another role via `GET /me?as=<role>`.
+  viewAs?: boolean;
 }
 
 export interface PhaseConfig {
