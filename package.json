@@ -12,6 +12,7 @@
     "dev:service": "npm run dev --workspace service",
     "build:service": "npm run build --workspace service",
     "build:extension": "npm run build --workspace extension",
+    "build:download": "npm run build:extension && node service/scripts/pack-extension.mjs",
     "typecheck": "npm run typecheck --workspace service && npm run typecheck --workspace extension",
     "build": "npm run build:service && npm run build:extension",
     "test": "vitest run",

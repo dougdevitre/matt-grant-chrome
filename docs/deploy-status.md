@@ -20,7 +20,9 @@ finish steps 1–3 below in ~10–15 minutes. See `docs/deploy.md` for the full 
   `/matt-grant-chrome/prod/*` + `kms:Decrypt`.
 - **App Runner service** — partially configured in the console (us-east-1): source = GitHub
   `dougdevitre/matt-grant-chrome` @ `main`; runtime Nodejs 22; build
-  `npm ci && npm run build:service`; start `node service/dist/index.js`; port `8787`;
+  `npm ci && npm run build:service && npm run build:download` (the `build:download` step packs the
+  extension zip so `/download/matt-grant-campaign-tools.zip` is served, not a 404);
+  start `node service/dist/index.js`; port `8787`;
   env vars `NODE_ENV=production`, `AUTH_DRIVER=clerk`, `SSM_PREFIX=/matt-grant-chrome/prod`,
   `ALLOWED_ORIGIN=chrome-extension://placeholder`; instance role selected. **Not yet created**
   — the GitHub source connection wasn't finished (see step 1).
@@ -94,8 +96,11 @@ Stable extension id: **`abalnefilpmcfbabfaljnophamaegfgj`** (from the pinned man
 `npm run build:extension` (production mode) — set in the build env so the bundle enables Clerk:
 `VITE_CLERK_PUBLISHABLE_KEY=pk_live_…` (and optional `VITE_CLERK_JWT_TEMPLATE`). The service URL is
 already baked; override with `VITE_DEFAULT_SERVICE_URL` only for the custom subdomain later.
-The App Runner **build command must build + pack the extension** for `/download` to update, e.g.
-`npm ci && npm run build && node service/scripts/pack-extension.mjs`.
+The App Runner **build command must build + pack the extension** for `/download` to update:
+`npm ci && npm run build:service && npm run build:download`. (`build:download` = build the extension +
+`node service/scripts/pack-extension.mjs`.) Alternatively deploy the repo `Dockerfile`, which now runs
+`build:download` and copies `service/public` into the image, so the download works with no build-command
+tweak.
 
 **3. Parameter Store — SSM SecureString at `/matt-grant-chrome/prod/<KEY>` (CloudShell).**
 ```bash
