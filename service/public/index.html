@@ -7,11 +7,13 @@
     <title>Matt Grant for Congress — Clerk Tools</title>
     <style>
       :root {
-        --red: #c8102e;
-        --ink: #1a1a1a;
-        --muted: #5c6470;
-        --line: #e4e7ec;
-        --bg: #f7f8fa;
+        /* Campaign palette (matches the extension's styles.css). */
+        --navy: #11203b;   /* primary / ink */
+        --red: #b22234;    /* accent — flag red */
+        --ink: #11203b;
+        --muted: #5b6675;
+        --line: #dfe4ec;
+        --bg: #f4f6fa;
       }
       * { box-sizing: border-box; }
       body {
@@ -25,13 +27,14 @@
       header { text-align: center; padding: 24px 0 8px; }
       .badge {
         width: 72px; height: 72px; border-radius: 18px;
-        background: var(--red); margin: 0 auto 16px;
+        background: var(--navy); margin: 0 auto 16px;
         display: flex; align-items: center; justify-content: center;
       }
       .badge span {
         width: 34px; height: 34px; border-radius: 50%;
         border: 7px solid #fff;
       }
+      .logo { max-width: 220px; height: auto; margin: 0 auto 14px; display: block; }
       h1 { font-size: 26px; margin: 0 0 6px; }
       .sub { color: var(--muted); margin: 0 0 4px; }
       .card {
@@ -40,11 +43,22 @@
       }
       h2 { font-size: 19px; margin: 0 0 12px; }
       .dl {
-        display: inline-block; background: var(--red); color: #fff;
+        display: inline-block; background: var(--navy); color: #fff;
         text-decoration: none; font-weight: 600; font-size: 17px;
         padding: 14px 28px; border-radius: 10px;
       }
-      .dl:hover { background: #a50d26; }
+      .dl:hover { background: #0a1428; }
+      .links { list-style: none; padding: 0; margin: 0; }
+      .links li { margin: 0; border-top: 1px solid var(--line); }
+      .links li:first-child { border-top: 0; }
+      .links a {
+        display: block; padding: 12px 4px; text-decoration: none; color: var(--navy);
+        font-weight: 600;
+      }
+      .links a:hover { color: var(--red); }
+      .links .desc { display: block; color: var(--muted); font-weight: 400; font-size: 14px; }
+      .dates { font-size: 15px; margin: 12px 0 0; color: var(--muted); }
+      .dates strong { color: var(--red); }
       .dl-note { color: var(--muted); font-size: 14px; margin-top: 10px; }
       ol { margin: 0; padding-left: 22px; }
       ol li { margin: 10px 0; }
@@ -90,7 +104,7 @@
           <li>Click <strong>Load unpacked</strong> (top-left) and choose the
             <code>matt-grant-clerk-extension</code> folder.</li>
           <li>Click the puzzle-piece icon in Chrome's toolbar and <strong>pin</strong> "Clerk Tools"
-            so its red icon stays visible.</li>
+            so its icon stays visible.</li>
         </ol>
         <div class="tip">💡 That "Developer mode" step is normal for a campaign tool that isn't in the
           public Chrome store. It's safe.</div>
@@ -99,7 +113,7 @@
       <div class="card">
         <h2>Start using it</h2>
         <ol>
-          <li>Click the <strong>red Clerk Tools icon</strong> in your toolbar — the panel opens on the
+          <li>Click the <strong>Clerk Tools icon</strong> in your toolbar — the panel opens on the
             right side of your browser.</li>
           <li>On the <strong>Clerk</strong> tab, <strong>sign in</strong> with your campaign email.
             (There's nothing to configure — it already knows where to connect.)</li>
@@ -122,6 +136,30 @@
         </table>
         <div class="tip">🛡️ Built-in guardrails: texts only go out during allowed hours, messages need
           approval, and anyone who opts out is removed automatically.</div>
+      </div>
+
+      <div class="card">
+        <h2>Voter resources (Missouri)</h2>
+        <p class="dl-note" style="margin: 0 0 10px">Official links for registering and voting in
+          Missouri's 2nd Congressional District.</p>
+        <ul class="links">
+          <li><a href="https://www.sos.mo.gov/elections/goVoteMissouri/register" target="_blank" rel="noopener">
+            Register to vote
+            <span class="desc">Missouri Secretary of State — online voter registration</span></a></li>
+          <li><a href="https://s1.sos.mo.gov/elections/voterlookup/" target="_blank" rel="noopener">
+            Check your registration &amp; polling place
+            <span class="desc">Missouri voter lookup — status, polling location, sample ballot</span></a></li>
+          <li><a href="https://www.sos.mo.gov/elections" target="_blank" rel="noopener">
+            Missouri election information
+            <span class="desc">Deadlines, absentee &amp; mail-in voting, and voter ID rules</span></a></li>
+          <li><a href="https://vote.gov/" target="_blank" rel="noopener">
+            Vote.gov
+            <span class="desc">Official federal voter-registration hub</span></a></li>
+        </ul>
+        <p class="dates">
+          Key dates — Missouri primary: <strong>August 4, 2026</strong> ·
+          registration deadline: <strong>about July 8, 2026</strong> (roughly four weeks before).
+        </p>
       </div>
 
       <div class="card">
