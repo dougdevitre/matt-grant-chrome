@@ -12,6 +12,7 @@ import type {
   ImportPreview,
   ImportResult,
   LocationInput,
+  LocationOptions,
   MessageTemplate,
   PhaseConfig,
   PollingPlace,
@@ -91,6 +92,7 @@ export const api = {
   me: (as?: Role) =>
     call<ClerkIdentity>(as ? `/me?as=${encodeURIComponent(as)}` : "/me"),
   phase: () => call<PhaseConfig>("/phase"),
+  locationOptions: () => call<LocationOptions>("/location/options"),
   resolve: (input: LocationInput) =>
     call<ResolveResponse>("/location/resolve", {
       method: "POST",

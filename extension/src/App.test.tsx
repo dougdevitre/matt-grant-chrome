@@ -16,6 +16,8 @@ vi.mock("./lib/api.js", () => ({
     me: vi.fn(),
     phase: vi.fn(),
     resolve: vi.fn(),
+    // LocationForm (Local tab) fetches this on mount; empty → text-input fallback.
+    locationOptions: vi.fn().mockResolvedValue({ counties: [] }),
     tasks: vi.fn(),
     events: vi.fn(),
     contacts: vi.fn(),

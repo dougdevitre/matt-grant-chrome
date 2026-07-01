@@ -58,6 +58,20 @@ export interface LocationInput {
   address?: string | null;
 }
 
+// Options for the cascading County → School district → ZIP selectors.
+export interface LocationOptionsDistrict {
+  name: string;
+  leaId: string;
+}
+export interface LocationOptionsCounty {
+  county: string;
+  schoolDistricts: LocationOptionsDistrict[];
+  zips: string[];
+}
+export interface LocationOptions {
+  counties: LocationOptionsCounty[];
+}
+
 export interface ResourceCard {
   id: string;
   lane: Lane;

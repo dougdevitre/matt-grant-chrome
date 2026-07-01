@@ -60,6 +60,20 @@ export interface LocationInput {
   address?: string | null;
 }
 
+// Options for the extension's cascading County → School district → ZIP selectors.
+export interface LocationOptionsDistrict {
+  name: string;
+  leaId: string;
+}
+export interface LocationOptionsCounty {
+  county: string;
+  schoolDistricts: LocationOptionsDistrict[];
+  zips: string[];
+}
+export interface LocationOptions {
+  counties: LocationOptionsCounty[];
+}
+
 export interface ResolvedLocation extends LocationInput {
   geocode: { lat: number | null; lng: number | null; censusBlock: string | null };
   inDistrict: boolean | null;
