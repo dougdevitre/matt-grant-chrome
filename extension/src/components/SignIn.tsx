@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { signInDev, signInClerk } from "../lib/api.js";
+import { useEffect, useState } from "react";
+import { DEFAULT_BASE, signInDev, signInClerk } from "../lib/api.js";
 import { clerkEnabled } from "../lib/clerkConfig.js";
 import { ClerkSignIn } from "./ClerkSignIn.js";
 import type { Role } from "../lib/types.js";
@@ -21,13 +21,24 @@ type Mode = "clerk" | "dev";
 // and is only honored when the service runs AUTH_DRIVER=dev.
 export function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
   const [mode, setMode] = useState<Mode>("clerk");
-  const [base, setBase] = useState("http://localhost:8787");
+  // Default to the build-time service URL (the deployed backend for a production
+  // build, localhost for dev) so a downloaded extension is zero-config. A value
+  // explicitly saved in chrome.storage still wins — hydrate it below.
+  const [base, setBase] = useState(DEFAULT_BASE);
   const [name, setName] = useState("");
   const [secret, setSecret] = useState("");
   const [role, setRole] = useState<Role>("registration_clerk");
   const [sessionToken, setSessionToken] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // If the user previously saved an explicit Service URL, prefer it over the
+  // build-time default (mirrors getBase() in api.ts).
+  useEffect(() => {
+    chrome.storage.local.get("apiBase").then(({ apiBase }) => {
+      if (typeof apiBase === "string" && apiBase) setBase(apiBase);
+    });
+  }, []);
 
   const canSubmit =
     !!base.trim() &&

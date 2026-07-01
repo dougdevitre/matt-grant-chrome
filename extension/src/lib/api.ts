@@ -27,7 +27,7 @@ import type {
 // subdomain) → the production App Runner default domain for any production
 // build → localhost for local dev.
 const PROD_SERVICE_URL = "https://ezvnqn5e5i.us-east-1.awsapprunner.com";
-const DEFAULT_BASE =
+export const DEFAULT_BASE =
   import.meta.env.VITE_DEFAULT_SERVICE_URL ||
   (import.meta.env.PROD ? PROD_SERVICE_URL : "http://localhost:8787");
 

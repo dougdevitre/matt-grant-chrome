@@ -8,6 +8,7 @@ import { SignIn } from "./SignIn.js";
 import { signInDev, signInClerk } from "../lib/api.js";
 
 vi.mock("../lib/api.js", () => ({
+  DEFAULT_BASE: "https://svc.example",
   signInDev: vi.fn().mockResolvedValue(undefined),
   signInClerk: vi.fn().mockResolvedValue(undefined),
 }));
@@ -21,6 +22,14 @@ vi.mock("@clerk/chrome-extension", () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+describe("SignIn — Service URL", () => {
+  it("defaults the Service URL to the build-time DEFAULT_BASE, not localhost", async () => {
+    render(<SignIn onSignedIn={vi.fn()} />);
+    const input = screen.getByLabelText("Service URL") as HTMLInputElement;
+    expect(input.value).toBe("https://svc.example");
+  });
 });
 
 describe("SignIn — Clerk (default)", () => {

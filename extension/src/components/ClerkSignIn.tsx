@@ -35,7 +35,14 @@ export function ClerkSignIn({
       } catch (e) {
         if (!cancelled) {
           exchanged.current = false; // allow a retry on the next render
-          setError(messageForError(e instanceof Error ? e.message : "sign_in_failed"));
+          // A fetch to the wrong/unreachable Service URL surfaces as a generic
+          // "Failed to fetch" — name the URL so a bad Service URL is obvious.
+          const raw = e instanceof Error ? e.message : "sign_in_failed";
+          setError(
+            /failed to fetch|networkerror|load failed/i.test(raw)
+              ? `Couldn't reach the service at ${base}. Check the Service URL.`
+              : messageForError(raw),
+          );
         }
       } finally {
         if (!cancelled) setBusy(false);

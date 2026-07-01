@@ -22,7 +22,15 @@ function SignOutBridge() {
 export function ClerkRoot({ children }: { children: ReactNode }) {
   if (!clerkEnabled) return <>{children}</>;
   return (
-    <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/index.html">
+    <ClerkProvider
+      publishableKey={PUBLISHABLE_KEY}
+      afterSignOutUrl="/index.html"
+      // In an extension the panel document is index.html; the default post-auth
+      // redirect of "/" isn't a real file → ERR_FILE_NOT_FOUND (esp. OAuth).
+      // Send every auth redirect back to the panel page instead.
+      signInFallbackRedirectUrl="/index.html"
+      signUpFallbackRedirectUrl="/index.html"
+    >
       <SignOutBridge />
       {children}
     </ClerkProvider>
