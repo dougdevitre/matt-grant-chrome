@@ -100,7 +100,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="hdr">
-        <h1>Matt Grant — Clerk Tools</h1>
+        <h1><img className="hdr-logo" src="icons/icon48.png" alt="" /> Matt Grant — Campaign Tools</h1>
         {me ? (
           <button className="role-chip linklike" onClick={handleSignOut} title="Sign out">
             {ROLE_LABELS[me.role]} ·&nbsp;exit

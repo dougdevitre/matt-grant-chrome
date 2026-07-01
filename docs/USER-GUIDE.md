@@ -1,4 +1,4 @@
-# Clerk Tools — user guide
+# Campaign Tools — user guide
 
 A plain-language guide for campaign clerks. If you're setting up the backend, see
 `docs/deploy.md` and `docs/deploy-status.md` instead — this page is for the people who *use* the
@@ -12,12 +12,12 @@ The same steps are shown on the download page itself (the service root URL, e.g.
 You only do this once, on a computer (Chrome, Edge, or Brave — not phones).
 
 1. Go to the download page and click **Download for Chrome**.
-2. **Unzip** the file. You'll get a folder named `matt-grant-clerk-extension`. Put it somewhere you
+2. **Unzip** the file. You'll get a folder named `matt-grant-campaign-tools`. Put it somewhere you
    won't delete it — if the folder goes away, so does the extension.
 3. In Chrome, go to `chrome://extensions` (type it in the address bar).
 4. Turn on **Developer mode** (switch in the top-right corner).
-5. Click **Load unpacked** (top-left) and select the `matt-grant-clerk-extension` folder.
-6. Click the puzzle-piece icon in the toolbar and **pin** "Clerk Tools" so the red icon stays visible.
+5. Click **Load unpacked** (top-left) and select the `matt-grant-campaign-tools` folder.
+6. Click the puzzle-piece icon in the toolbar and **pin** "Campaign Tools" so the icon stays visible.
 
 > Developer mode is expected here — this is a campaign tool that isn't in the public Chrome store. It's
 > safe. (A future version may be published to the Chrome Web Store for one-click install; when that
@@ -25,7 +25,7 @@ You only do this once, on a computer (Chrome, Edge, or Brave — not phones).
 
 ## 2. Sign in
 
-1. Click the **red Clerk Tools icon** — the panel opens on the right.
+1. Click the **Campaign Tools icon** — the panel opens on the right.
 2. On the **Clerk** tab, **sign in** with your campaign email. There's nothing to configure; the
    extension already knows which server to talk to.
 3. The **first time** you sign in, an admin needs to give you a role. Until they do, you'll see a

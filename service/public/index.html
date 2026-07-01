@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
-    <title>Matt Grant for Congress — Clerk Tools</title>
+    <title>Matt Grant for Congress — Campaign Tools</title>
     <style>
       :root {
         /* Campaign palette (matches the extension's styles.css). */
@@ -35,6 +35,11 @@
         border: 7px solid #fff;
       }
       .logo { max-width: 220px; height: auto; margin: 0 auto 14px; display: block; }
+      .hero {
+        width: 100%; max-width: 420px; height: auto; margin: 0 auto 16px;
+        display: block; border-radius: 14px; border: 1px solid var(--line);
+        background: #fff;
+      }
       h1 { font-size: 26px; margin: 0 0 6px; }
       .sub { color: var(--muted); margin: 0 0 4px; }
       .card {
@@ -79,15 +84,19 @@
   <body>
     <div class="wrap">
       <header>
-        <div class="badge"><span></span></div>
-        <h1>Clerk Tools</h1>
+        <video class="hero" autoplay muted loop playsinline poster="/media/intro-poster.jpg"
+               aria-label="Matt Grant for Congress">
+          <source src="/media/intro.mp4" type="video/mp4" />
+          <img src="/media/logo.png" alt="Matt Grant for Congress" class="logo" />
+        </video>
+        <h1>Campaign Tools</h1>
         <p class="sub">Matt Grant for Congress — MO-02 primary, August 4, 2026</p>
         <p class="sub">A Chrome side-panel for voter registration &amp; get-out-the-vote work.</p>
       </header>
 
       <div class="card" style="text-align: center">
         <h2>Get the extension</h2>
-        <a class="dl" href="/download/matt-grant-clerk-extension.zip" download>
+        <a class="dl" href="/download/matt-grant-campaign-tools.zip" download>
           ⬇ Download for Chrome
         </a>
         <p class="dl-note">Works in Chrome, Edge, and Brave on a computer (not phones).</p>
@@ -97,13 +106,13 @@
         <h2>Install it (about 2 minutes)</h2>
         <ol>
           <li><strong>Unzip</strong> the file you just downloaded. You'll get a folder named
-            <code>matt-grant-clerk-extension</code>. Keep it somewhere you won't delete
+            <code>matt-grant-campaign-tools</code>. Keep it somewhere you won't delete
             (deleting the folder removes the extension).</li>
           <li>Open Chrome and go to <code>chrome://extensions</code> (type it into the address bar).</li>
           <li>Turn on <strong>Developer mode</strong> — the switch in the top-right corner.</li>
           <li>Click <strong>Load unpacked</strong> (top-left) and choose the
-            <code>matt-grant-clerk-extension</code> folder.</li>
-          <li>Click the puzzle-piece icon in Chrome's toolbar and <strong>pin</strong> "Clerk Tools"
+            <code>matt-grant-campaign-tools</code> folder.</li>
+          <li>Click the puzzle-piece icon in Chrome's toolbar and <strong>pin</strong> "Campaign Tools"
             so its icon stays visible.</li>
         </ol>
         <div class="tip">💡 That "Developer mode" step is normal for a campaign tool that isn't in the
@@ -113,9 +122,9 @@
       <div class="card">
         <h2>Start using it</h2>
         <ol>
-          <li>Click the <strong>Clerk Tools icon</strong> in your toolbar — the panel opens on the
+          <li>Click the <strong>Campaign Tools icon</strong> in your toolbar — the panel opens on the
             right side of your browser.</li>
-          <li>On the <strong>Clerk</strong> tab, <strong>sign in</strong> with your campaign email.
+          <li>When the panel opens, <strong>sign in</strong> with your campaign email.
             (There's nothing to configure — it already knows where to connect.)</li>
           <li>The first time you sign in, an <strong>admin gives you a role</strong>. Until then you'll
             see a limited view. Message your campaign admin to get switched on.</li>
