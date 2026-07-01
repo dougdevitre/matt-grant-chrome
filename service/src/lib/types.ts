@@ -178,7 +178,7 @@ export interface AuditEvent {
   ts: string;
   clerkId: string;
   action: string;
-  entity: "task" | "event" | "shift" | "template" | "send" | "optout";
+  entity: "task" | "event" | "shift" | "template" | "send" | "optout" | "contact" | "followup";
   entityId: string;
   // Tamper-evident hash chain (filled by the store on append).
   seq?: number;
@@ -247,6 +247,16 @@ export type RegStatus = "unknown" | "unregistered" | "reg_link_sent" | "register
 export type VoteStatus = "unknown" | "plan_made" | "early_voted" | "voted";
 export type VoteMethod = "early_in_person" | "absentee" | "election_day";
 
+/** A voter's plan for how/when/where they'll cast a ballot (GOTV). */
+export interface VotePlan {
+  method: VoteMethod | null;
+  date: string | null; // ISO date they plan to vote (YYYY-MM-DD)
+  time: string | null; // free text, e.g. "before work"
+  needsRide: boolean; // flag for a ride to the polls
+  note: string | null;
+  updatedAt: string;
+}
+
 export interface Contact {
   id: string;
   firstName: string;
@@ -262,6 +272,7 @@ export interface Contact {
   voteStatus: VoteStatus;
   voteMethod: VoteMethod | null; // how they voted / plan to vote
   votedAt: string | null; // ISO timestamp when recorded voted
+  votePlan: VotePlan | null; // GOTV: when/how/where they plan to vote
   consentSms: boolean;
   consentEmail: boolean;
   consentSource: string | null; // how/when consent was obtained
@@ -297,6 +308,25 @@ export interface ContactLog {
   disposition: ContactDisposition;
   note: string | null;
   createdAt: string;
+}
+
+/**
+ * A scheduled follow-up for a contact (GOTV). Surfaced to a clerk when due —
+ * there is no auto-sender, so the clerk sends via the normal approved flow,
+ * keeping a human in the loop for TCPA. `templateId` is an optional suggestion.
+ */
+export type FollowUpStatus = "pending" | "done" | "cancelled";
+
+export interface FollowUp {
+  id: string;
+  contactId: string;
+  clerkId: string; // who scheduled it
+  templateId: string | null; // suggested template to send
+  dueAt: string; // ISO — when it should surface
+  note: string | null;
+  status: FollowUpStatus;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Import staging

@@ -169,3 +169,110 @@ describe("GOTV not-yet-voted filter", () => {
     expect(res.body[0].voteStatus).toBe("early_voted");
   });
 });
+
+describe("GOTV vote plan", () => {
+  async function jordan() {
+    const list = await request(app).get("/contacts").set("Authorization", admin());
+    return list.body.find((c: { firstName: string }) => c.firstName === "Jordan");
+  }
+
+  it("saves a vote plan and advances an unknown voteStatus to plan_made", async () => {
+    const j = await jordan();
+    const r = await request(app)
+      .post(`/contacts/${j.id}/vote-plan`)
+      .set("Authorization", admin())
+      .send({ method: "early_in_person", time: "before work", needsRide: true });
+    expect(r.status).toBe(201);
+    const after = await request(app)
+      .get(`/contacts/${j.id}`)
+      .set("Authorization", admin());
+    expect(after.body.votePlan.method).toBe("early_in_person");
+    expect(after.body.votePlan.needsRide).toBe(true);
+    expect(after.body.voteStatus).toBe("plan_made");
+    expect(after.body.version).toBeGreaterThan(j.version);
+  });
+
+  it("rejects an invalid method (400) and a stale version (409)", async () => {
+    const j = await jordan();
+    const bad = await request(app)
+      .post(`/contacts/${j.id}/vote-plan`)
+      .set("Authorization", admin())
+      .send({ method: "carrier_pigeon" });
+    expect(bad.status).toBe(400);
+    const stale = await request(app)
+      .post(`/contacts/${j.id}/vote-plan`)
+      .set("Authorization", admin())
+      .send({ method: "absentee", version: 999 });
+    expect(stale.status).toBe(409);
+  });
+});
+
+describe("GOTV polling place", () => {
+  it("returns the address, an LEA, and the official MO lookup URL", async () => {
+    const { id } = await firstContactId();
+    const r = await request(app)
+      .get(`/contacts/${id}/polling-place`)
+      .set("Authorization", admin());
+    expect(r.status).toBe(200);
+    expect(r.body.lookupUrl).toContain("sos.mo.gov");
+    expect(r.body.lea).toBeTruthy();
+    expect(typeof r.body.address === "string" || r.body.address === null).toBe(true);
+  });
+
+  it("404s for an unknown contact", async () => {
+    const r = await request(app)
+      .get(`/contacts/nope/polling-place`)
+      .set("Authorization", admin());
+    expect(r.status).toBe(404);
+  });
+});
+
+describe("GOTV follow-up reminders", () => {
+  async function scheduleFor(id: string, dueAt: string) {
+    return request(app)
+      .post(`/contacts/${id}/followups`)
+      .set("Authorization", admin())
+      .send({ dueAt, note: "call back" });
+  }
+
+  it("schedules reminders and lists only those come due", async () => {
+    const { id } = await firstContactId();
+    const past = await scheduleFor(id, "2020-01-01T00:00:00.000Z");
+    expect(past.status).toBe(201);
+    expect(past.body.status).toBe("pending");
+    const future = await scheduleFor(id, "2999-01-01T00:00:00.000Z");
+    expect(future.status).toBe(201);
+
+    const due = await request(app)
+      .get("/followups?due=now")
+      .set("Authorization", admin());
+    expect(due.status).toBe(200);
+    const ids = due.body.map((f: { id: string }) => f.id);
+    expect(ids).toContain(past.body.id);
+    expect(ids).not.toContain(future.body.id);
+  });
+
+  it("marks a reminder done so it drops off the due queue", async () => {
+    const { id } = await firstContactId();
+    const f = await scheduleFor(id, "2020-01-01T00:00:00.000Z");
+    const done = await request(app)
+      .post(`/followups/${f.body.id}/done`)
+      .set("Authorization", admin())
+      .send({});
+    expect(done.status).toBe(200);
+    expect(done.body.status).toBe("done");
+    const due = await request(app).get("/followups?due=now").set("Authorization", admin());
+    expect(due.body.map((x: { id: string }) => x.id)).not.toContain(f.body.id);
+  });
+
+  it("rejects a bad dueAt (400) and unknown reminder (404)", async () => {
+    const { id } = await firstContactId();
+    const bad = await scheduleFor(id, "not-a-date");
+    expect(bad.status).toBe(400);
+    const missing = await request(app)
+      .post(`/followups/nope/done`)
+      .set("Authorization", admin())
+      .send({});
+    expect(missing.status).toBe(404);
+  });
+});

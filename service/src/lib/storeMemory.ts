@@ -14,12 +14,15 @@ import type {
   NewContact,
   NewContactLog,
   ContactFilter,
+  NewFollowUp,
+  FollowUpFilter,
 } from "./store.js";
 import type {
   AuditEvent,
   CampaignEvent,
   Contact,
   ContactLog,
+  FollowUp,
   MessageTemplate,
   OutboxEntry,
   Phase,
@@ -41,6 +44,7 @@ export function makeMemoryStore(): StorePort {
   const contacts = new Map<string, Contact>();
   const contactsByKey = new Map<string, string>(); // contactKey -> contactId
   const contactLogs: ContactLog[] = [];
+  const followUps = new Map<string, FollowUp>();
   const auditLog: AuditEvent[] = [];
   let lastAuditHash: string | null = null;
   let nextAuditSeq = 0;
@@ -191,6 +195,35 @@ export function makeMemoryStore(): StorePort {
       return contactLogs.filter((l) => l.contactId === contactId);
     },
 
+    async createFollowUp(input: NewFollowUp) {
+      const f: FollowUp = {
+        ...input,
+        id: randomUUID(),
+        status: "pending",
+        createdAt: now(),
+        updatedAt: now(),
+      };
+      followUps.set(f.id, f);
+      return f;
+    },
+    async listFollowUps(filter: FollowUpFilter = {}) {
+      return [...followUps.values()]
+        .filter((f) => {
+          if (filter.status && f.status !== filter.status) return false;
+          if (filter.contactId && f.contactId !== filter.contactId) return false;
+          if (filter.dueBefore && f.dueAt > filter.dueBefore) return false;
+          return true;
+        })
+        .sort((a, b) => a.dueAt.localeCompare(b.dueAt));
+    },
+    async getFollowUp(id) {
+      return followUps.get(id);
+    },
+    async putFollowUp(followUp) {
+      followUps.set(followUp.id, followUp);
+      return followUp;
+    },
+
     async appendAudit(evt) {
       // Tamper-evident chain: each entry's hash covers its content + the prior
       // hash, so any later edit/deletion/reorder breaks the chain on verification.
@@ -299,6 +332,7 @@ async function seed(store: StorePort): Promise<void> {
       voteStatus: "unknown",
       voteMethod: null,
       votedAt: null,
+      votePlan: null,
       consentSms: false,
       consentEmail: false,
       consentSource: null,
@@ -323,6 +357,7 @@ async function seed(store: StorePort): Promise<void> {
       voteStatus: "early_voted",
       voteMethod: "early_in_person",
       votedAt: "2026-06-28T10:00:00-05:00",
+      votePlan: null,
       consentSms: true,
       consentEmail: false,
       consentSource: "seed",

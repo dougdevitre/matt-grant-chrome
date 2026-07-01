@@ -27,6 +27,12 @@ export function CommsPanel({ me }: { me: ClerkIdentity }) {
   const [stepCode, setStepCode] = useState("");
   const [sendMsg, setSendMsg] = useState<string | null>(null);
 
+  // batch send (to not-yet-voted)
+  const [batchTemplateId, setBatchTemplateId] = useState("");
+  const [batchZip, setBatchZip] = useState("");
+  const [batchMsg, setBatchMsg] = useState<string | null>(null);
+  const [batchBusy, setBatchBusy] = useState(false);
+
   const isAdmin = me.scopes.includes("sms.send" as never);
   const [mode, setMode] = useState<"dev" | "clerk">("dev");
   useEffect(() => {
@@ -107,6 +113,31 @@ export function CommsPanel({ me }: { me: ClerkIdentity }) {
 
   const approved = (templates ?? []).filter((t) => t.complianceApprovalId);
   const pending = (templates ?? []).filter((t) => !t.complianceApprovalId);
+  // Batch only sends email/social — SMS's per-message step-up isn't run here.
+  const batchable = approved.filter((t) => t.channel !== "sms");
+
+  async function doBatch() {
+    setBatchBusy(true);
+    setError(null);
+    setBatchMsg(null);
+    try {
+      const r = await api.sendBatch({
+        templateId: batchTemplateId,
+        zip: batchZip.trim() || null,
+      });
+      setBatchMsg(
+        `Sent ${r.sent} of ${r.attempted}` +
+          (r.blocked ? `, ${r.blocked} blocked` : "") +
+          (r.failed ? `, ${r.failed} failed` : "") +
+          (r.truncated ? " (capped at 200)" : "") +
+          "."
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "batch_failed");
+    } finally {
+      setBatchBusy(false);
+    }
+  }
 
   return (
     <div className="panel">
@@ -258,6 +289,54 @@ export function CommsPanel({ me }: { me: ClerkIdentity }) {
                 Send
               </button>
               {sendMsg ? <div className="ok-note">{sendMsg}</div> : null}
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      {/* Batch send to not-yet-voted */}
+      {has("comms.send") ? (
+        <section>
+          <h2 className="section-h">Batch: not-yet-voted</h2>
+          {batchable.length === 0 ? (
+            <p className="note">No approved email/social templates available.</p>
+          ) : (
+            <div className="form">
+              <label>
+                Template
+                <select
+                  className="select"
+                  value={batchTemplateId}
+                  onChange={(e) => setBatchTemplateId(e.target.value)}
+                >
+                  <option value="">Choose…</option>
+                  {batchable.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      [{t.category}/{t.channel}] {t.subject ?? t.id.slice(0, 6)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                ZIP (optional)
+                <input
+                  value={batchZip}
+                  onChange={(e) => setBatchZip(e.target.value)}
+                  placeholder="e.g. 63031"
+                />
+              </label>
+              <button
+                className="btn"
+                disabled={!batchTemplateId || batchBusy}
+                onClick={doBatch}
+              >
+                Send to not-yet-voted
+              </button>
+              <p className="note">
+                Skips anyone who already voted or opted out. SMS isn't sent in batch.
+                Capped at 200.
+              </p>
+              {batchMsg ? <div className="ok-note">{batchMsg}</div> : null}
             </div>
           )}
         </section>

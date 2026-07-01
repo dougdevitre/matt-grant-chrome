@@ -3,18 +3,22 @@
 // secrets are bundled here.
 
 import type {
+  BatchResult,
   ClerkIdentity,
   Contact,
   EventWithShifts,
+  FollowUp,
   GotvDashboard,
   ImportPreview,
   ImportResult,
   LocationInput,
   MessageTemplate,
   PhaseConfig,
+  PollingPlace,
   ResolveResponse,
   Shift,
   Task,
+  VoteMethod,
 } from "./types.js";
 
 // Baked in at build time so a downloaded extension talks to the deployed
@@ -138,6 +142,43 @@ export const api = {
 
   // GOTV turnout dashboard (counts only).
   gotvDashboard: () => call<GotvDashboard>("/dashboard/gotv"),
+
+  // GOTV: per-contact vote plan, polling place, follow-ups
+  setVotePlan: (
+    contactId: string,
+    plan: {
+      method?: VoteMethod | null;
+      date?: string | null;
+      time?: string | null;
+      needsRide?: boolean;
+      note?: string | null;
+      version?: number;
+    }
+  ) =>
+    call<{ status: string }>(`/contacts/${contactId}/vote-plan`, {
+      method: "POST",
+      body: JSON.stringify(plan),
+    }),
+  pollingPlace: (contactId: string) =>
+    call<PollingPlace>(`/contacts/${contactId}/polling-place`),
+  scheduleFollowUp: (
+    contactId: string,
+    input: { templateId?: string | null; dueAt: string; note?: string | null }
+  ) =>
+    call<FollowUp>(`/contacts/${contactId}/followups`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  followUpsDue: () => call<FollowUp[]>("/followups?due=now"),
+  resolveFollowUp: (id: string, action: "done" | "cancel") =>
+    call<FollowUp>(`/followups/${id}/${action}`, { method: "POST", body: "{}" }),
+
+  // GOTV: batch send a template to not-yet-voted contacts
+  sendBatch: (input: { templateId: string; zip?: string | null; limit?: number }) =>
+    call<BatchResult>("/comms/send-batch", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
   importPreview: (csv: string) =>
     call<ImportPreview>("/contacts/import/preview", {
       method: "POST",

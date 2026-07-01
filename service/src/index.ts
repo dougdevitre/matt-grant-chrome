@@ -17,6 +17,7 @@ import { tasksRouter } from "./routes/tasks.js";
 import { eventsRouter } from "./routes/events.js";
 import { commsRouter } from "./routes/comms.js";
 import { contactsRouter } from "./routes/contacts.js";
+import { followupsRouter } from "./routes/followups.js";
 import { dashboardRouter } from "./routes/dashboard.js";
 import { auditRouter } from "./routes/audit.js";
 import { securityHeaders } from "./lib/securityHeaders.js";
@@ -89,6 +90,7 @@ app.use("/tasks", tasksRouter);
 app.use("/events", eventsRouter);
 app.use("/comms", commsRouter);
 app.use("/contacts", contactsRouter);
+app.use("/followups", followupsRouter);
 app.use("/dashboard", dashboardRouter);
 app.use("/audit", auditRouter);
 

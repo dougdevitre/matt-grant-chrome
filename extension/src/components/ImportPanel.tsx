@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api.js";
 import type { Contact, ImportPreview } from "../lib/types.js";
+import { ContactDetail } from "./ContactDetail.js";
 
 const SAMPLE = "firstName,lastName,email,phone,address,city,zip\n";
 
@@ -15,6 +16,7 @@ export function ImportPanel({ canRead }: { canRead: boolean }) {
   const [contacts, setContacts] = useState<Contact[] | null>(null);
   const [total, setTotal] = useState(0);
   const [notVoted, setNotVoted] = useState(false);
+  const [openId, setOpenId] = useState<string | null>(null);
 
   // Load one page; offset 0 replaces the list (fresh load), otherwise appends.
   async function loadContacts(offset = 0, onlyNotVoted = notVoted) {
@@ -157,17 +159,25 @@ export function ImportPanel({ canRead }: { canRead: boolean }) {
             Not yet voted (GOTV)
           </label>
           {contacts.map((c) => (
-            <div className="contact" key={c.id}>
-              <div>
-                <strong>
-                  {c.firstName} {c.lastName}
-                </strong>
-                <span className="note">
-                  {" "}
-                  {c.zip ?? ""} {c.email ?? c.phone ?? ""}
-                </span>
+            <div key={c.id}>
+              <div
+                className="contact contact-row"
+                onClick={() => setOpenId((id) => (id === c.id ? null : c.id))}
+              >
+                <div>
+                  <strong>
+                    {c.firstName} {c.lastName}
+                  </strong>
+                  <span className="note">
+                    {" "}
+                    {c.zip ?? ""} {c.email ?? c.phone ?? ""}
+                  </span>
+                </div>
+                <span className={`tag ${c.regStatus}`}>{c.regStatus}</span>
               </div>
-              <span className={`tag ${c.regStatus}`}>{c.regStatus}</span>
+              {openId === c.id ? (
+                <ContactDetail contact={c} onChanged={() => loadContacts(0)} />
+              ) : null}
             </div>
           ))}
           {contacts.length < total ? (

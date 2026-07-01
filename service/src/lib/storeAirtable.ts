@@ -5,7 +5,7 @@
 // JSON blob holding the full typed object — pragmatic and drift-resistant.
 //
 // Expected tables (create in the base): Tasks, Events, Shifts, Templates,
-// Contacts, ContactLogs, OptOut, Outbox, Audit. Each needs a `Data` long-text
+// Contacts, ContactLogs, FollowUps, OptOut, Outbox, Audit. Each needs a `Data` long-text
 // field. Point reads use filterByFormula on these single-line-text columns, so
 // they must exist where used: `RecordId` (Tasks/Events/Shifts/Templates/Contacts),
 // `ContactKey` (Contacts/OptOut), `IdempotencyKey` (Outbox). The remaining columns
@@ -23,6 +23,8 @@ import type {
   NewContact,
   NewContactLog,
   ContactFilter,
+  NewFollowUp,
+  FollowUpFilter,
 } from "./store.js";
 import { randomUUID } from "node:crypto";
 import type {
@@ -30,6 +32,7 @@ import type {
   CampaignEvent,
   Contact,
   ContactLog,
+  FollowUp,
   MessageTemplate,
   OutboxEntry,
   Shift,
@@ -300,6 +303,36 @@ export async function makeAirtableStore(): Promise<StorePort> {
       return (await listAll<ContactLog>("ContactLogs")).filter(
         (l) => l.contactId === contactId
       );
+    },
+
+    async createFollowUp(input: NewFollowUp) {
+      const f: FollowUp = {
+        ...input,
+        id: randomUUID(),
+        status: "pending",
+        createdAt: now(),
+        updatedAt: now(),
+      };
+      return upsert("FollowUps", f, { ContactId: f.contactId, Status: f.status });
+    },
+    async listFollowUps(filter: FollowUpFilter = {}) {
+      return (await listAll<FollowUp>("FollowUps"))
+        .filter((f) => {
+          if (filter.status && f.status !== filter.status) return false;
+          if (filter.contactId && f.contactId !== filter.contactId) return false;
+          if (filter.dueBefore && f.dueAt > filter.dueBefore) return false;
+          return true;
+        })
+        .sort((a, b) => a.dueAt.localeCompare(b.dueAt));
+    },
+    async getFollowUp(id) {
+      return findOneByFormula<FollowUp>("FollowUps", "RecordId", id);
+    },
+    async putFollowUp(followUp) {
+      return upsert("FollowUps", followUp, {
+        ContactId: followUp.contactId,
+        Status: followUp.status,
+      });
     },
 
     async appendAudit(evt: AuditEvent) {
