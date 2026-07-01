@@ -8,6 +8,7 @@ import type {
   LocationInput,
   PhaseConfig,
   ResolveResponse,
+  Role,
 } from "./lib/types.js";
 import { Countdown } from "./components/Countdown.js";
 import { LocationForm } from "./components/LocationForm.js";
@@ -23,6 +24,10 @@ type Tab = "local" | "tasks" | "schedule" | "import" | "comms" | "turnout";
 
 export default function App() {
   const [me, setMe] = useState<ClerkIdentity | null>(null);
+  // The signed-in account's real role (never the preview). Drives whether the
+  // "View as" switcher shows and what the sign-out chip reports.
+  const [realRole, setRealRole] = useState<Role | null>(null);
+  const [viewAs, setViewAs] = useState<Role | null>(null);
   const [phase, setPhase] = useState<PhaseConfig | null>(null);
   const [data, setData] = useState<ResolveResponse | null>(null);
   const [tab, setTab] = useState<Tab>("local");
@@ -31,11 +36,17 @@ export default function App() {
   const [needsAuth, setNeedsAuth] = useState(false);
   const [ready, setReady] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (as?: Role | null) => {
     setError(null);
     try {
-      const [identity, phaseConfig] = await Promise.all([api.me(), api.phase()]);
+      const [identity, phaseConfig] = await Promise.all([
+        api.me(as ?? undefined),
+        api.phase(),
+      ]);
       setMe(identity);
+      // The server only sets viewAs on a preview response, so a plain response
+      // is the real identity — the one source of truth for realRole.
+      if (!identity.viewAs) setRealRole(identity.role);
       setPhase(phaseConfig);
       setNeedsAuth(false);
     } catch (e) {
@@ -71,8 +82,16 @@ export default function App() {
     await signOut();
     await clerkSignOut(); // also end the Clerk session (no-op when Clerk is off)
     setMe(null);
+    setRealRole(null);
+    setViewAs(null);
     setData(null);
     setNeedsAuth(true);
+  }
+
+  // Admin-only: re-fetch /me as another role to preview its view (null = own).
+  function previewAs(role: Role | null) {
+    setViewAs(role);
+    load(role);
   }
 
   if (!ready) return <div className="app"><p className="note">Loading…</p></div>;
@@ -105,10 +124,39 @@ export default function App() {
         <h1><img className="hdr-logo" src="icons/icon48.png" alt="" /> Matt Grant — Campaign Tools</h1>
         {me ? (
           <button className="role-chip linklike" onClick={handleSignOut} title="Sign out">
-            {ROLE_LABELS[me.role]} ·&nbsp;exit
+            {ROLE_LABELS[realRole ?? me.role]} ·&nbsp;exit
           </button>
         ) : null}
       </header>
+
+      {realRole === "admin" ? (
+        <label className="viewas">
+          <span className="viewas-label">View as</span>
+          <select
+            className="viewas-select"
+            value={viewAs ?? ""}
+            onChange={(e) => previewAs((e.target.value || null) as Role | null)}
+          >
+            <option value="">Admin (you)</option>
+            {(Object.keys(ROLE_LABELS) as Role[])
+              .filter((r) => r !== "admin")
+              .map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_LABELS[r]}
+                </option>
+              ))}
+          </select>
+        </label>
+      ) : null}
+
+      {me?.viewAs ? (
+        <div className="preview-banner">
+          Previewing as <strong>{ROLE_LABELS[me.role]}</strong> — actions still run as admin.{" "}
+          <button className="linklike" onClick={() => previewAs(null)}>
+            Back to my view
+          </button>
+        </div>
+      ) : null}
 
       {phase ? <Countdown config={phase} /> : null}
 
