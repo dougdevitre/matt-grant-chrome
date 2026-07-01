@@ -171,6 +171,7 @@ export interface MessageTemplate {
 // --- Contacts (UI) ---
 
 export type RegStatus = "unknown" | "unregistered" | "reg_link_sent" | "registered";
+export type VoteStatus = "unknown" | "plan_made" | "early_voted" | "voted";
 
 export interface Contact {
   id: string;
@@ -182,8 +183,27 @@ export interface Contact {
   zip: string | null;
   inDistrict: boolean | null;
   regStatus: RegStatus;
+  voteStatus: VoteStatus;
   optOut: boolean;
   tags: string[];
+}
+
+export interface GotvZipRow {
+  zip: string;
+  total: number;
+  cast: number;
+  remaining: number;
+}
+
+export interface GotvDashboard {
+  total: number;
+  counts: Record<VoteStatus, number>;
+  pledged: number;
+  earlyVoted: number;
+  voted: number;
+  cast: number;
+  remaining: number;
+  byZip: GotvZipRow[];
 }
 
 export type ImportRowStatus = "new" | "duplicate" | "invalid" | "out_of_district";

@@ -245,6 +245,7 @@ export interface LeaRecord {
 
 export type RegStatus = "unknown" | "unregistered" | "reg_link_sent" | "registered";
 export type VoteStatus = "unknown" | "plan_made" | "early_voted" | "voted";
+export type VoteMethod = "early_in_person" | "absentee" | "election_day";
 
 export interface Contact {
   id: string;
@@ -259,6 +260,8 @@ export interface Contact {
   censusBlock: string | null;
   regStatus: RegStatus;
   voteStatus: VoteStatus;
+  voteMethod: VoteMethod | null; // how they voted / plan to vote
+  votedAt: string | null; // ISO timestamp when recorded voted
   consentSms: boolean;
   consentEmail: boolean;
   consentSource: string | null; // how/when consent was obtained
@@ -279,7 +282,12 @@ export type ContactDisposition =
   | "undecided"
   | "opposed"
   | "registered"
-  | "opted_out";
+  | "opted_out"
+  // GOTV / turnout dispositions
+  | "pledged_to_vote"
+  | "voted_early"
+  | "voted_absentee"
+  | "voted_election_day";
 
 export interface ContactLog {
   id: string;

@@ -6,6 +6,7 @@ import { audit, getStore } from "./store.js";
 import { contactKeyFor } from "./keys.js";
 import { geocodeAddress } from "./publicData.js";
 import type {
+  Contact,
   ContactDisposition,
   ContactLog,
   ImportPreview,
@@ -202,6 +203,8 @@ export async function commitImport(
       censusBlock,
       regStatus: "unknown",
       voteStatus: "unknown",
+      voteMethod: null,
+      votedAt: null,
       consentSms: false,
       consentEmail: false,
       consentSource: null,
@@ -251,21 +254,55 @@ export async function logDisposition(
   });
 
   // Reflect terminal dispositions onto the contact (bumping its version).
+  const now = new Date().toISOString();
   if (disposition === "registered") {
     await store.putContact({
       ...contact,
       regStatus: "registered",
       version: contact.version + 1,
-      updatedAt: new Date().toISOString(),
+      updatedAt: now,
     });
   } else if (disposition === "opted_out") {
     await store.putContact({
       ...contact,
       optOut: true,
       version: contact.version + 1,
-      updatedAt: new Date().toISOString(),
+      updatedAt: now,
     });
     await store.addOptOut(contact.contactKey);
+  } else if (disposition === "pledged_to_vote") {
+    // A commitment to vote — only advance from an earlier state (never
+    // downgrade someone already recorded as voted).
+    if (contact.voteStatus === "unknown") {
+      await store.putContact({
+        ...contact,
+        voteStatus: "plan_made",
+        version: contact.version + 1,
+        updatedAt: now,
+      });
+    }
+  } else if (
+    disposition === "voted_early" ||
+    disposition === "voted_absentee" ||
+    disposition === "voted_election_day"
+  ) {
+    const voteMethod: NonNullable<Contact["voteMethod"]> =
+      disposition === "voted_election_day"
+        ? "election_day"
+        : disposition === "voted_absentee"
+          ? "absentee"
+          : "early_in_person";
+    // Election-day is the terminal "voted"; early/absentee are "early_voted".
+    const voteStatus: Contact["voteStatus"] =
+      disposition === "voted_election_day" ? "voted" : "early_voted";
+    await store.putContact({
+      ...contact,
+      voteStatus,
+      voteMethod,
+      votedAt: contact.votedAt ?? now,
+      version: contact.version + 1,
+      updatedAt: now,
+    });
   }
   return log;
 }

@@ -141,6 +141,14 @@ export function makeMemoryStore(): StorePort {
       return [...contacts.values()].filter((c) => {
         if (filter.zip && c.zip !== filter.zip) return false;
         if (filter.regStatus && c.regStatus !== filter.regStatus) return false;
+        if (filter.voteStatus && c.voteStatus !== filter.voteStatus) return false;
+        // notVoted = still needs to turn out: exclude anyone who has cast a
+        // ballot already (early/absentee counts as voted).
+        if (
+          filter.notVoted &&
+          (c.voteStatus === "voted" || c.voteStatus === "early_voted")
+        )
+          return false;
         if (filter.assignedClerkId && c.assignedClerkId !== filter.assignedClerkId)
           return false;
         return true;
@@ -289,6 +297,8 @@ async function seed(store: StorePort): Promise<void> {
       censusBlock: null,
       regStatus: "unregistered",
       voteStatus: "unknown",
+      voteMethod: null,
+      votedAt: null,
       consentSms: false,
       consentEmail: false,
       consentSource: null,
@@ -310,7 +320,9 @@ async function seed(store: StorePort): Promise<void> {
       inDistrict: null,
       censusBlock: null,
       regStatus: "registered",
-      voteStatus: "unknown",
+      voteStatus: "early_voted",
+      voteMethod: "early_in_person",
+      votedAt: "2026-06-28T10:00:00-05:00",
       consentSms: true,
       consentEmail: false,
       consentSource: "seed",
@@ -320,6 +332,45 @@ async function seed(store: StorePort): Promise<void> {
       assignedClerkId: null,
       contactKey: contactKeyFor("+13145550199"),
       source: "seed",
+    });
+
+    // GOTV turnout scripts, ready for a Compliance Clerk to review + approve
+    // (complianceApprovalId stays null until then, so they can't be sent yet).
+    await store.createTemplate({
+      category: "turnout",
+      channel: "sms",
+      subject: null,
+      body:
+        "Hi {{first}}, it's the Matt Grant for Congress team. Can we count on you to " +
+        "vote in the Aug 4 primary? Reply YES to pledge. Paid for by Matt Grant for " +
+        "Congress. Reply STOP to opt out.",
+      hasDisclaimer: true,
+      hasOptOut: true,
+      createdBy: "seed",
+    });
+    await store.createTemplate({
+      category: "turnout",
+      channel: "sms",
+      subject: null,
+      body:
+        "{{first}}, early voting is underway. Make a plan to vote before Aug 4 — your " +
+        "day, time, and polling place. Look yours up at sos.mo.gov. Paid for by Matt " +
+        "Grant for Congress. Reply STOP to opt out.",
+      hasDisclaimer: true,
+      hasOptOut: true,
+      createdBy: "seed",
+    });
+    await store.createTemplate({
+      category: "turnout",
+      channel: "sms",
+      subject: null,
+      body:
+        "Today's the day, {{first}}! Polls are open until 7pm for the Aug 4 primary. " +
+        "Bring a photo ID and make your voice heard. Paid for by Matt Grant for " +
+        "Congress. Reply STOP to opt out.",
+      hasDisclaimer: true,
+      hasOptOut: true,
+      createdBy: "seed",
     });
   }
 }

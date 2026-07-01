@@ -173,6 +173,15 @@ body {
 .pill.done { color: var(--ok); background: #e7f4ec; border-color: #c7e6d3; }
 .pill.skipped { color: var(--muted); }
 
+/* GOTV turnout */
+.gotv-bar {
+  height: 12px; border-radius: 999px; background: var(--surface-sunk);
+  border: 1px solid var(--line); overflow: hidden; margin: 6px 0 4px;
+}
+.gotv-fill { height: 100%; background: var(--ok); border-radius: 999px; transition: width 0.3s; }
+.gotv-zips { margin-top: 12px; }
+.filter-toggle { display: flex; align-items: center; gap: 4px; margin: 4px 0 8px; cursor: pointer; }
+
 /* Schedule */
 .schedule { display: grid; gap: 10px; }
 .event {
