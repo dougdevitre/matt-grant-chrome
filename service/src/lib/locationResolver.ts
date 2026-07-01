@@ -21,6 +21,7 @@ import {
   leaForCounty,
   nearbyVenues,
 } from "./publicData.js";
+import { isConsistentSelection, leaIdFor } from "./locationOptions.js";
 
 const SOS_REGISTER = "https://www.sos.mo.gov/elections/goVoteMissouri/register";
 const SOS_STATUS = "https://voteroutreach.sos.mo.gov/portal/";
@@ -253,12 +254,26 @@ export async function resolveLocalContext(
 ): Promise<ResolveResponse> {
   const geo = await geocodeAddress(input.address);
   const lea = await leaForCounty(input.county);
-  const confidence = inferConfidence(
+  // Prefer the reference dataset's real leaId for a known county+district
+  // selection; fall back to the derived slug for free-text / unknown input.
+  const datasetLeaId = leaIdFor(input.county, input.schoolDistrict);
+  const leaId = datasetLeaId ?? lea.leaId;
+
+  let confidence = inferConfidence(
     input.county,
     input.schoolDistrict,
     input.zip,
     geo.congressionalDistrict
   );
+  // Keep confidence honest: without a geocoded address, only a selection that
+  // matches the MO-02 roster (dropdowns) earns MEDIUM — an unknown/typo'd
+  // free-text county+district+zip drops to LOW rather than looking trustworthy.
+  if (
+    confidence === "MEDIUM" &&
+    !isConsistentSelection(input.county, input.schoolDistrict, input.zip)
+  ) {
+    confidence = "LOW";
+  }
 
   // inDistrict: trust geocode when present; otherwise unknown (null) at LOW/MEDIUM.
   const inDistrict =
@@ -270,7 +285,7 @@ export async function resolveLocalContext(
     ...input,
     geocode: { lat: geo.lat, lng: geo.lng, censusBlock: geo.censusBlock },
     inDistrict,
-    leaId: lea.leaId,
+    leaId,
     confidence,
     resolvedAt: now.toISOString(),
   };

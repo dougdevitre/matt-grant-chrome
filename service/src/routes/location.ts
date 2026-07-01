@@ -1,10 +1,17 @@
 import { Router } from "express";
 import { requireScope } from "../auth.js";
 import { resolveLocalContext } from "../lib/locationResolver.js";
+import { getLocationOptions } from "../lib/locationOptions.js";
 import { leaForCounty } from "../lib/publicData.js";
 import type { LocationInput } from "../lib/types.js";
 
 export const locationRouter = Router();
+
+// GET /location/options — county → school district → ZIP options that populate
+// the extension's cascading selectors (from the MO-02 reference dataset).
+locationRouter.get("/options", requireScope("voter.read"), (_req, res) => {
+  res.json(getLocationOptions());
+});
 
 // POST /location/resolve — role + phase + location aware cards.
 locationRouter.post("/resolve", requireScope("voter.read"), async (req, res) => {
