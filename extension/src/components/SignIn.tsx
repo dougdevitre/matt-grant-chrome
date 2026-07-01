@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { DEFAULT_BASE, signInDev, signInClerk } from "../lib/api.js";
+import { DEFAULT_BASE, LOCK_BASE, signInDev, signInClerk } from "../lib/api.js";
 import { clerkEnabled } from "../lib/clerkConfig.js";
 import { ClerkSignIn } from "./ClerkSignIn.js";
 import type { Role } from "../lib/types.js";
@@ -22,8 +22,8 @@ type Mode = "clerk" | "dev";
 export function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
   const [mode, setMode] = useState<Mode>("clerk");
   // Default to the build-time service URL (the deployed backend for a production
-  // build, localhost for dev) so a downloaded extension is zero-config. A value
-  // explicitly saved in chrome.storage still wins — hydrate it below.
+  // build, localhost for dev) so a downloaded extension is zero-config. In prod
+  // this is locked; in dev a saved override is hydrated below.
   const [base, setBase] = useState(DEFAULT_BASE);
   const [name, setName] = useState("");
   const [secret, setSecret] = useState("");
@@ -32,9 +32,11 @@ export function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // If the user previously saved an explicit Service URL, prefer it over the
-  // build-time default (mirrors getBase() in api.ts).
+  // In a production build the Service URL is locked to the baked-in backend, so
+  // a stale saved override can never strand a clerk. In dev, an explicitly saved
+  // Service URL still wins (mirrors getBase() in api.ts).
   useEffect(() => {
+    if (LOCK_BASE) return;
     chrome.storage.local.get("apiBase").then(({ apiBase }) => {
       if (typeof apiBase === "string" && apiBase) setBase(apiBase);
     });
@@ -88,7 +90,7 @@ export function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
       <div className="form">
         <label>
           Service URL
-          <input value={base} onChange={(e) => setBase(e.target.value)} />
+          <input value={base} onChange={(e) => setBase(e.target.value)} readOnly={LOCK_BASE} />
         </label>
 
         {mode === "clerk" ? (

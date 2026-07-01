@@ -9,6 +9,7 @@ import { signInDev, signInClerk } from "../lib/api.js";
 
 vi.mock("../lib/api.js", () => ({
   DEFAULT_BASE: "https://svc.example",
+  LOCK_BASE: false,
   signInDev: vi.fn().mockResolvedValue(undefined),
   signInClerk: vi.fn().mockResolvedValue(undefined),
 }));

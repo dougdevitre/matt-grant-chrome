@@ -22,14 +22,19 @@ import type {
 } from "./types.js";
 
 // Baked in at build time so a downloaded extension talks to the deployed
-// service with no configuration. A value saved in chrome.storage still wins
-// (see getBase). Order: explicit VITE_DEFAULT_SERVICE_URL (e.g. a custom
-// subdomain) → the production App Runner default domain for any production
-// build → localhost for local dev.
+// service with no configuration. Order: explicit VITE_DEFAULT_SERVICE_URL (e.g.
+// a custom subdomain) → the production App Runner default domain for any
+// production build → localhost for local dev.
 const PROD_SERVICE_URL = "https://ezvnqn5e5i.us-east-1.awsapprunner.com";
 export const DEFAULT_BASE =
   import.meta.env.VITE_DEFAULT_SERVICE_URL ||
   (import.meta.env.PROD ? PROD_SERVICE_URL : "http://localhost:8787");
+
+// A production build always talks to the baked-in service URL. We intentionally
+// ignore any saved `apiBase` override in prod so a stale value from earlier
+// testing (e.g. http://localhost:8787) can never strand a downloaded extension
+// on the wrong backend. The manual override remains available in dev builds.
+export const LOCK_BASE = import.meta.env.PROD;
 
 async function getToken(): Promise<string | null> {
   const { authToken } = await chrome.storage.local.get("authToken");
@@ -37,6 +42,7 @@ async function getToken(): Promise<string | null> {
 }
 
 async function getBase(): Promise<string> {
+  if (LOCK_BASE) return DEFAULT_BASE;
   const { apiBase } = await chrome.storage.local.get("apiBase");
   return typeof apiBase === "string" && apiBase ? apiBase : DEFAULT_BASE;
 }
