@@ -23,9 +23,13 @@ import type {
 
 // Baked in at build time so a downloaded extension talks to the deployed
 // service with no configuration. A value saved in chrome.storage still wins
-// (see getBase). Falls back to localhost for local dev / when unset.
+// (see getBase). Order: explicit VITE_DEFAULT_SERVICE_URL (e.g. a custom
+// subdomain) → the production App Runner default domain for any production
+// build → localhost for local dev.
+const PROD_SERVICE_URL = "https://ezvnqn5e5i.us-east-1.awsapprunner.com";
 const DEFAULT_BASE =
-  import.meta.env.VITE_DEFAULT_SERVICE_URL || "http://localhost:8787";
+  import.meta.env.VITE_DEFAULT_SERVICE_URL ||
+  (import.meta.env.PROD ? PROD_SERVICE_URL : "http://localhost:8787");
 
 async function getToken(): Promise<string | null> {
   const { authToken } = await chrome.storage.local.get("authToken");
