@@ -75,3 +75,44 @@ Until this is done the service runs on its in-memory store (data resets on each 
   boot with a clear log line is the safety net working — read the App Runner logs.
 - Single instance is fine; for multi-instance set `REDIS_URL` (+ `REQUIRE_SHARED_STATE=true`)
   so the SMS daily cap and rate limiter stay shared (see `docs/deploy.md`).
+
+## Going live for real users (production onboarding)
+
+Live service URL: **`https://ezvnqn5e5i.us-east-1.awsapprunner.com`** — baked into production
+extension builds by default (`extension/src/lib/api.ts`), so a downloaded copy needs no config.
+Stable extension id: **`abalnefilpmcfbabfaljnophamaegfgj`** (from the pinned manifest `key`).
+
+**1. Clerk Dashboard (enables in-panel sign-in).**
+- **Configure → Native applications → enable the Native API.** Without this the extension shows
+  *"The Native API is disabled for this instance."* (Chrome extensions are "native" apps to Clerk.)
+- **Configure → Domains:** a production instance must have a domain associated (even with no web app).
+- Allow-list the extension origin `chrome-extension://abalnefilpmcfbabfaljnophamaegfgj`.
+- **Configure → API keys:** copy the **Publishable key** (`pk_live_…`) and the **Frontend API URL**.
+  `CLERK_ISSUER` = that Frontend API URL; `CLERK_JWKS_URL` = `<issuer>/.well-known/jwks.json`.
+
+**2. Extension build must bake Clerk on (public values).** The download is packed from
+`npm run build:extension` (production mode) — set in the build env so the bundle enables Clerk:
+`VITE_CLERK_PUBLISHABLE_KEY=pk_live_…` (and optional `VITE_CLERK_JWT_TEMPLATE`). The service URL is
+already baked; override with `VITE_DEFAULT_SERVICE_URL` only for the custom subdomain later.
+The App Runner **build command must build + pack the extension** for `/download` to update, e.g.
+`npm ci && npm run build && node service/scripts/pack-extension.mjs`.
+
+**3. Parameter Store — SSM SecureString at `/matt-grant-chrome/prod/<KEY>` (CloudShell).**
+```bash
+REGION=us-east-1; PREFIX=/matt-grant-chrome/prod
+put(){ aws ssm put-parameter --region "$REGION" --overwrite --type "$1" --name "$PREFIX/$2" --value "$3"; }
+put String CLERK_ISSUER   "https://<your-frontend-api>"
+put String CLERK_JWKS_URL "https://<your-frontend-api>/.well-known/jwks.json"
+put String AIRTABLE_BASE_ID "appkOfv2eLaDMAjPu"
+read -rs JWT_SECRET;       echo; put SecureString JWT_SECRET       "$JWT_SECRET";       unset JWT_SECRET
+read -rs CONTACT_KEY_SALT; echo; put SecureString CONTACT_KEY_SALT "$CONTACT_KEY_SALT"; unset CONTACT_KEY_SALT
+read -rs AIRTABLE_PAT;     echo; put SecureString AIRTABLE_PAT     "$AIRTABLE_PAT";     unset AIRTABLE_PAT
+# generate secrets with: openssl rand -hex 32 ; optional: TWILIO_* (SMS), CENSUS_API_KEY, FEC_API_KEY
+```
+
+**4. App Runner env vars (not SSM):** `NODE_ENV=production`, `AUTH_DRIVER=clerk`,
+`SSM_PREFIX=/matt-grant-chrome/prod`, `STORE_DRIVER=airtable`,
+`ALLOWED_ORIGIN=chrome-extension://abalnefilpmcfbabfaljnophamaegfgj`.
+
+**5. Per new user:** share the download page → they install + sign in → an admin sets their
+`publicMetadata.role` in Clerk (or bulk via `scripts/set-clerk-roles.mjs`).

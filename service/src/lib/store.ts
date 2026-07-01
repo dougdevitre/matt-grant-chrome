@@ -9,6 +9,7 @@ import type {
   Contact,
   ContactLog,
   MessageTemplate,
+  FollowUp,
   OutboxEntry,
   RegStatus,
   Shift,
@@ -36,6 +37,15 @@ export interface ContactFilter {
   /** GOTV: keep only contacts not yet recorded as "voted" (the turnout queue). */
   notVoted?: boolean;
   assignedClerkId?: string | null;
+}
+
+export type NewFollowUp = Omit<FollowUp, "id" | "status" | "createdAt" | "updatedAt">;
+
+export interface FollowUpFilter {
+  status?: FollowUp["status"] | null;
+  contactId?: string | null;
+  /** Only reminders due at/before this ISO instant (the "due now" queue). */
+  dueBefore?: string | null;
 }
 
 export interface StorePort {
@@ -72,6 +82,11 @@ export interface StorePort {
   putContact(contact: Contact): Promise<Contact>;
   appendContactLog(log: NewContactLog): Promise<ContactLog>;
   logsForContact(contactId: string): Promise<ContactLog[]>;
+  // follow-up reminders (GOTV)
+  createFollowUp(input: NewFollowUp): Promise<FollowUp>;
+  listFollowUps(filter?: FollowUpFilter): Promise<FollowUp[]>;
+  getFollowUp(id: string): Promise<FollowUp | undefined>;
+  putFollowUp(followUp: FollowUp): Promise<FollowUp>;
   // audit
   appendAudit(evt: AuditEvent): Promise<void>;
   readAudit(): Promise<AuditEvent[]>;

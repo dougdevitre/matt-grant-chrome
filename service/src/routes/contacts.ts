@@ -7,11 +7,22 @@ import {
   optOutContact,
   previewImport,
   recordConsent,
+  setVotePlan,
 } from "../lib/contacts.js";
+import { scheduleFollowUp } from "../lib/followups.js";
+import { leaForCounty } from "../lib/publicData.js";
 import { getStore } from "../lib/store.js";
 import { pathParam, queryStr } from "../lib/http.js";
 import { parsePageParams, applyPage } from "../lib/pagination.js";
-import type { ContactDisposition, RegStatus, VoteStatus } from "../lib/types.js";
+import type {
+  ContactDisposition,
+  RegStatus,
+  VoteMethod,
+  VoteStatus,
+} from "../lib/types.js";
+
+const VOTE_METHODS: VoteMethod[] = ["early_in_person", "absentee", "election_day"];
+const MO_VOTER_LOOKUP = "https://s1.sos.mo.gov/elections/voterlookup/";
 
 export const contactsRouter = Router();
 
@@ -155,4 +166,73 @@ contactsRouter.post("/:id/consent", requireScope("contact.log"), async (req, res
     return;
   }
   res.status(201).json({ status: "consent_recorded" });
+});
+
+// POST /contacts/:id/vote-plan  { method?, date?, time?, needsRide?, note?, version? }
+contactsRouter.post("/:id/vote-plan", requireScope("contact.log"), async (req, res) => {
+  const b = req.body ?? {};
+  if (b.method != null && !VOTE_METHODS.includes(b.method)) {
+    res.status(400).json({ error: "invalid_method" });
+    return;
+  }
+  const expectedVersion = typeof b.version === "number" ? b.version : undefined;
+  const result = await setVotePlan(
+    pathParam(req, "id"),
+    req.clerk!.clerkId,
+    {
+      method: b.method ?? null,
+      date: typeof b.date === "string" ? b.date : null,
+      time: typeof b.time === "string" ? b.time : null,
+      needsRide: b.needsRide === true,
+      note: typeof b.note === "string" ? b.note : null,
+    },
+    expectedVersion
+  );
+  if (!result.ok) {
+    sendContactWriteError(res, result.code);
+    return;
+  }
+  res.status(201).json({ status: "vote_plan_saved" });
+});
+
+// GET /contacts/:id/polling-place — the contact's local election authority +
+// the official MO lookup (no precinct-level API exists, so this surfaces the
+// authoritative place to check rather than inventing a polling location).
+contactsRouter.get("/:id/polling-place", requireScope("voter.read"), async (req, res) => {
+  const store = await getStore();
+  const contact = await store.getContact(pathParam(req, "id"));
+  if (!contact) {
+    res.status(404).json({ error: "contact_not_found" });
+    return;
+  }
+  const address = [contact.addressLine1, contact.city, contact.zip]
+    .filter(Boolean)
+    .join(", ");
+  // Best-effort jurisdiction hint from the contact's city (resolveLea always
+  // returns a usable county-clerk record + the SOS lookup for unknown inputs).
+  const lea = await leaForCounty(contact.city ?? "");
+  res.json({ address: address || null, lea, lookupUrl: MO_VOTER_LOOKUP });
+});
+
+// POST /contacts/:id/followups  { templateId?, dueAt, note? } — schedule a GOTV
+// follow-up reminder (surfaced to a clerk when due; not auto-sent).
+contactsRouter.post("/:id/followups", requireScope("contact.log"), async (req, res) => {
+  const b = req.body ?? {};
+  const dueAt = typeof b.dueAt === "string" ? b.dueAt : null;
+  if (!dueAt || Number.isNaN(Date.parse(dueAt))) {
+    res.status(400).json({ error: "invalid_dueAt" });
+    return;
+  }
+  const followUp = await scheduleFollowUp({
+    contactId: pathParam(req, "id"),
+    clerkId: req.clerk!.clerkId,
+    templateId: typeof b.templateId === "string" ? b.templateId : null,
+    dueAt,
+    note: typeof b.note === "string" ? b.note : null,
+  });
+  if (!followUp) {
+    res.status(404).json({ error: "contact_not_found" });
+    return;
+  }
+  res.status(201).json(followUp);
 });

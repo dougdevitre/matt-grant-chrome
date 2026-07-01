@@ -3,25 +3,33 @@
 // secrets are bundled here.
 
 import type {
+  BatchResult,
   ClerkIdentity,
   Contact,
   EventWithShifts,
+  FollowUp,
   GotvDashboard,
   ImportPreview,
   ImportResult,
   LocationInput,
   MessageTemplate,
   PhaseConfig,
+  PollingPlace,
   ResolveResponse,
   Shift,
   Task,
+  VoteMethod,
 } from "./types.js";
 
 // Baked in at build time so a downloaded extension talks to the deployed
 // service with no configuration. A value saved in chrome.storage still wins
-// (see getBase). Falls back to localhost for local dev / when unset.
+// (see getBase). Order: explicit VITE_DEFAULT_SERVICE_URL (e.g. a custom
+// subdomain) → the production App Runner default domain for any production
+// build → localhost for local dev.
+const PROD_SERVICE_URL = "https://ezvnqn5e5i.us-east-1.awsapprunner.com";
 const DEFAULT_BASE =
-  import.meta.env.VITE_DEFAULT_SERVICE_URL || "http://localhost:8787";
+  import.meta.env.VITE_DEFAULT_SERVICE_URL ||
+  (import.meta.env.PROD ? PROD_SERVICE_URL : "http://localhost:8787");
 
 async function getToken(): Promise<string | null> {
   const { authToken } = await chrome.storage.local.get("authToken");
@@ -138,6 +146,43 @@ export const api = {
 
   // GOTV turnout dashboard (counts only).
   gotvDashboard: () => call<GotvDashboard>("/dashboard/gotv"),
+
+  // GOTV: per-contact vote plan, polling place, follow-ups
+  setVotePlan: (
+    contactId: string,
+    plan: {
+      method?: VoteMethod | null;
+      date?: string | null;
+      time?: string | null;
+      needsRide?: boolean;
+      note?: string | null;
+      version?: number;
+    }
+  ) =>
+    call<{ status: string }>(`/contacts/${contactId}/vote-plan`, {
+      method: "POST",
+      body: JSON.stringify(plan),
+    }),
+  pollingPlace: (contactId: string) =>
+    call<PollingPlace>(`/contacts/${contactId}/polling-place`),
+  scheduleFollowUp: (
+    contactId: string,
+    input: { templateId?: string | null; dueAt: string; note?: string | null }
+  ) =>
+    call<FollowUp>(`/contacts/${contactId}/followups`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  followUpsDue: () => call<FollowUp[]>("/followups?due=now"),
+  resolveFollowUp: (id: string, action: "done" | "cancel") =>
+    call<FollowUp>(`/followups/${id}/${action}`, { method: "POST", body: "{}" }),
+
+  // GOTV: batch send a template to not-yet-voted contacts
+  sendBatch: (input: { templateId: string; zip?: string | null; limit?: number }) =>
+    call<BatchResult>("/comms/send-batch", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
   importPreview: (csv: string) =>
     call<ImportPreview>("/contacts/import/preview", {
       method: "POST",

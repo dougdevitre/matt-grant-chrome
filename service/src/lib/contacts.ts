@@ -205,6 +205,7 @@ export async function commitImport(
       voteStatus: "unknown",
       voteMethod: null,
       votedAt: null,
+      votePlan: null,
       consentSms: false,
       consentEmail: false,
       consentSource: null,
@@ -357,5 +358,47 @@ export async function recordConsent(
   };
   await store.putContact(updated);
   await audit(store, clerkId, consented ? "contact.consent" : "contact.consent_revoke", "optout", contactId);
+  return { ok: true };
+}
+
+/**
+ * Capture/replace a contact's vote plan (when/how/where + ride flag). Setting a
+ * plan advances an unknown voteStatus to "plan_made" (never downgrades someone
+ * already recorded as having voted).
+ */
+export async function setVotePlan(
+  contactId: string,
+  clerkId: string,
+  plan: {
+    method?: Contact["voteMethod"];
+    date?: string | null;
+    time?: string | null;
+    needsRide?: boolean;
+    note?: string | null;
+  },
+  expectedVersion?: number
+): Promise<ContactWriteResult> {
+  const store = await getStore();
+  const contact = await store.getContact(contactId);
+  if (!contact) return { ok: false, code: "not_found" };
+  if (expectedVersion != null && expectedVersion !== contact.version)
+    return { ok: false, code: "version_conflict" };
+  const now = new Date().toISOString();
+  await store.putContact({
+    ...contact,
+    votePlan: {
+      method: plan.method ?? null,
+      date: plan.date ?? null,
+      time: plan.time ?? null,
+      needsRide: plan.needsRide ?? false,
+      note: plan.note ?? null,
+      updatedAt: now,
+    },
+    // A plan implies intent to vote — advance only from "unknown".
+    voteStatus: contact.voteStatus === "unknown" ? "plan_made" : contact.voteStatus,
+    version: contact.version + 1,
+    updatedAt: now,
+  });
+  await audit(store, clerkId, "contact.vote_plan", "contact", contactId);
   return { ok: true };
 }

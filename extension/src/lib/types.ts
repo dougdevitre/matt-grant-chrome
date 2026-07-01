@@ -172,6 +172,16 @@ export interface MessageTemplate {
 
 export type RegStatus = "unknown" | "unregistered" | "reg_link_sent" | "registered";
 export type VoteStatus = "unknown" | "plan_made" | "early_voted" | "voted";
+export type VoteMethod = "early_in_person" | "absentee" | "election_day";
+
+export interface VotePlan {
+  method: VoteMethod | null;
+  date: string | null;
+  time: string | null;
+  needsRide: boolean;
+  note: string | null;
+  updatedAt: string;
+}
 
 export interface Contact {
   id: string;
@@ -184,8 +194,34 @@ export interface Contact {
   inDistrict: boolean | null;
   regStatus: RegStatus;
   voteStatus: VoteStatus;
+  voteMethod: VoteMethod | null;
+  votePlan: VotePlan | null;
   optOut: boolean;
   tags: string[];
+  version: number;
+}
+
+export interface PollingPlace {
+  address: string | null;
+  lea: { name: string | null; url: string; kind: string };
+  lookupUrl: string;
+}
+
+export interface FollowUp {
+  id: string;
+  contactId: string;
+  templateId: string | null;
+  dueAt: string;
+  note: string | null;
+  status: "pending" | "done" | "cancelled";
+}
+
+export interface BatchResult {
+  attempted: number;
+  sent: number;
+  blocked: number;
+  failed: number;
+  truncated: boolean;
 }
 
 export interface GotvZipRow {

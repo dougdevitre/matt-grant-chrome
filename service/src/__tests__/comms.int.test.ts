@@ -167,3 +167,53 @@ describe("seeded GOTV turnout templates", () => {
     }
   });
 });
+
+describe("GOTV batch send-to-unvoted", () => {
+  // Email register-category template (approved) — avoids the SMS step-up path so
+  // the batch can exercise the contact-selection + per-send loop directly.
+  const EMAIL_BODY =
+    "Make your plan to vote. Paid for by Friends of Matt Grant. Reply STOP or unsubscribe to opt out.";
+  async function approvedEmailTemplate() {
+    const admin = bearer(tokenFor("admin"));
+    const c = await request(app)
+      .post("/comms/templates")
+      .set("Authorization", admin)
+      .send({ category: "register", channel: "email", body: EMAIL_BODY });
+    expect(c.status).toBe(201);
+    await request(app)
+      .post(`/comms/templates/${c.body.id}/approve`)
+      .set("Authorization", admin)
+      .send({ approve: true });
+    return c.body.id;
+  }
+
+  it("sends to not-yet-voted contacts and skips those who already voted", async () => {
+    const id = await approvedEmailTemplate();
+    const res = await request(app)
+      .post("/comms/send-batch")
+      .set("Authorization", bearer(tokenFor("admin")))
+      .send({ templateId: id });
+    expect(res.status).toBe(200);
+    // Seed: Jordan (email, unknown → included) + Avery (early_voted → excluded).
+    expect(res.body.attempted).toBe(1);
+    expect(res.body.sent).toBe(1);
+    expect(res.body.truncated).toBe(false);
+  });
+
+  it("404s for an unknown template", async () => {
+    const res = await request(app)
+      .post("/comms/send-batch")
+      .set("Authorization", bearer(tokenFor("admin")))
+      .send({ templateId: "does-not-exist" });
+    expect(res.status).toBe(404);
+  });
+
+  it("requires comms.send scope", async () => {
+    const id = await approvedEmailTemplate();
+    const res = await request(app)
+      .post("/comms/send-batch")
+      .set("Authorization", bearer(tokenFor("registration_clerk", "reg-1")))
+      .send({ templateId: id });
+    expect(res.status).toBe(403);
+  });
+});

@@ -200,6 +200,57 @@ commsRouter.post(
   }
 );
 
+// POST /comms/send-batch  { templateId, zip?, limit? }
+// GOTV: send one template to every not-yet-voted contact (optionally in a ZIP).
+// Reuses the same per-contact gated pipeline as send-to-contact — including the
+// SMS budget, which naturally throttles a large batch. Caps the candidate set.
+const BATCH_MAX = 200;
+commsRouter.post("/send-batch", requireScope("comms.send"), async (req, res) => {
+  const b = req.body ?? {};
+  if (!b.templateId) {
+    res.status(400).json({ error: "missing_fields" });
+    return;
+  }
+  const store = await getStore();
+  const template = await store.getTemplate(String(b.templateId));
+  if (!template) {
+    res.status(404).json({ error: "template_not_found" });
+    return;
+  }
+  const limit = Math.min(
+    typeof b.limit === "number" && b.limit > 0 ? b.limit : BATCH_MAX,
+    BATCH_MAX
+  );
+  const zip = typeof b.zip === "string" && b.zip ? b.zip : null;
+  const candidates = (await store.listContacts({ zip, notVoted: true })).filter(
+    (c) => !c.optOut && (template.channel === "sms" ? c.phone : c.email)
+  );
+  const truncated = candidates.length > limit;
+  const batch = candidates.slice(0, limit);
+
+  const summary = { attempted: batch.length, sent: 0, blocked: 0, failed: 0, truncated };
+  for (const contact of batch) {
+    const guard = await smsGuard(req, template, contact);
+    if (guard) {
+      summary.blocked += 1;
+      continue;
+    }
+    const result = await sendToContact(
+      String(b.templateId),
+      contact.id,
+      `batch-${b.templateId}-${contact.id}`,
+      req.clerk!.clerkId
+    );
+    if (result.ok) {
+      summary.sent += 1;
+      if (template.channel === "sms") await recordSmsSent();
+    } else {
+      summary.failed += 1;
+    }
+  }
+  res.json(summary);
+});
+
 // POST /comms/optout  { recipient }
 commsRouter.post("/optout", requireScope("optout.manage"), async (req, res) => {
   const recipient = req.body?.recipient;
