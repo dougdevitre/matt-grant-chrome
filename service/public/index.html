@@ -23,36 +23,87 @@
         color: var(--ink);
         background: var(--bg);
       }
-      .wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px 64px; }
-      header { text-align: center; padding: 24px 0 8px; }
-      .badge {
-        width: 72px; height: 72px; border-radius: 18px;
-        background: var(--navy); margin: 0 auto 16px;
-        display: flex; align-items: center; justify-content: center;
-      }
-      .badge span {
-        width: 34px; height: 34px; border-radius: 50%;
-        border: 7px solid #fff;
-      }
+      .wrap { max-width: 820px; margin: 0 auto; padding: 32px 20px 64px; }
+      header { text-align: center; padding: 16px 0 8px; }
       .logo { max-width: 220px; height: auto; margin: 0 auto 14px; display: block; }
       .hero {
-        width: 100%; max-width: 420px; height: auto; margin: 0 auto 16px;
+        width: 100%; max-width: 460px; height: auto; margin: 0 auto 18px;
         display: block; border-radius: 14px; border: 1px solid var(--line);
         background: #fff;
       }
-      h1 { font-size: 26px; margin: 0 0 6px; }
-      .sub { color: var(--muted); margin: 0 0 4px; }
+      .eyebrow {
+        text-transform: uppercase; letter-spacing: .08em; font-size: 13px;
+        font-weight: 700; color: var(--red); margin: 0 0 8px;
+      }
+      h1 { font-size: 32px; line-height: 1.2; margin: 0 0 10px; }
+      .lede { font-size: 18px; color: var(--muted); margin: 0 auto 8px; max-width: 620px; }
+      .tagline {
+        font-size: 17px; font-style: italic; color: var(--navy); margin: 10px auto 0;
+        max-width: 560px;
+      }
+      .cta-row { margin: 22px 0 6px; }
+      .dl {
+        display: inline-block; background: var(--navy); color: #fff;
+        text-decoration: none; font-weight: 600; font-size: 17px;
+        padding: 14px 30px; border-radius: 10px;
+      }
+      .dl:hover { background: #0a1428; }
+      .ghost {
+        display: inline-block; margin-left: 8px; color: var(--navy); font-weight: 600;
+        text-decoration: none; padding: 14px 18px; border-radius: 10px;
+        border: 1px solid var(--line); background: #fff;
+      }
+      .ghost:hover { border-color: var(--navy); }
+      .dl-note { color: var(--muted); font-size: 14px; margin-top: 10px; }
+
+      /* Urgency / phase strip */
+      .phases {
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+        margin: 22px 0 4px;
+      }
+      .phase {
+        background: #fff; border: 1px solid var(--line); border-radius: 12px;
+        padding: 14px 12px; text-align: center;
+      }
+      .phase .k { font-size: 13px; text-transform: uppercase; letter-spacing: .05em;
+        color: var(--muted); font-weight: 700; margin: 0 0 4px; }
+      .phase .d { font-size: 17px; font-weight: 700; color: var(--navy); margin: 0; }
+      .phase .d strong { color: var(--red); }
+      .countdown {
+        text-align: center; font-size: 15px; color: var(--muted); margin: 8px 0 0;
+      }
+      .countdown b { color: var(--red); font-size: 17px; }
+
       .card {
         background: #fff; border: 1px solid var(--line); border-radius: 14px;
         padding: 24px; margin: 20px 0;
       }
-      h2 { font-size: 19px; margin: 0 0 12px; }
-      .dl {
-        display: inline-block; background: var(--navy); color: #fff;
-        text-decoration: none; font-weight: 600; font-size: 17px;
-        padding: 14px 28px; border-radius: 10px;
+      h2 { font-size: 21px; margin: 0 0 14px; }
+      .why { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+      .why .item { }
+      .why h3 { font-size: 16px; margin: 0 0 6px; color: var(--navy); }
+      .why p { margin: 0; color: var(--muted); font-size: 15px; }
+
+      .roles-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+      .role {
+        border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px;
+        background: #fff;
       }
-      .dl:hover { background: #0a1428; }
+      .role .name { color: var(--red); font-weight: 700; font-size: 15px; margin: 0 0 4px; }
+      .role p { margin: 0; font-size: 15px; color: var(--ink); }
+      .features { margin: 16px 0 0; padding: 0; list-style: none;
+        display: flex; flex-wrap: wrap; gap: 8px; }
+      .features li {
+        background: var(--bg); border: 1px solid var(--line); border-radius: 999px;
+        padding: 6px 12px; font-size: 13px; font-weight: 600; color: var(--navy);
+      }
+
+      ol { margin: 0; padding-left: 22px; }
+      ol li { margin: 10px 0; }
+      code {
+        background: #eef0f3; padding: 2px 6px; border-radius: 5px;
+        font-size: 14px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
       .links { list-style: none; padding: 0; margin: 0; }
       .links li { margin: 0; border-top: 1px solid var(--line); }
       .links li:first-child { border-top: 0; }
@@ -64,21 +115,15 @@
       .links .desc { display: block; color: var(--muted); font-weight: 400; font-size: 14px; }
       .dates { font-size: 15px; margin: 12px 0 0; color: var(--muted); }
       .dates strong { color: var(--red); }
-      .dl-note { color: var(--muted); font-size: 14px; margin-top: 10px; }
-      ol { margin: 0; padding-left: 22px; }
-      ol li { margin: 10px 0; }
-      code {
-        background: #eef0f3; padding: 2px 6px; border-radius: 5px;
-        font-size: 14px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      }
-      .roles { width: 100%; border-collapse: collapse; font-size: 15px; }
-      .roles td { border-top: 1px solid var(--line); padding: 8px 4px; vertical-align: top; }
-      .roles td:first-child { white-space: nowrap; color: var(--red); font-weight: 600; }
       .tip {
         background: #fff8e6; border: 1px solid #f4e2a8; border-radius: 10px;
         padding: 12px 16px; font-size: 15px; margin: 14px 0 0;
       }
       footer { text-align: center; color: var(--muted); font-size: 13px; margin-top: 32px; }
+      @media (max-width: 620px) {
+        .why, .roles-grid, .phases { grid-template-columns: 1fr; }
+        h1 { font-size: 26px; }
+      }
     </style>
   </head>
   <body>
@@ -89,12 +134,92 @@
           <source src="/media/intro.mp4" type="video/mp4" />
           <img src="/media/logo.png" alt="Matt Grant for Congress" class="logo" />
         </video>
-        <h1>Campaign Tools</h1>
-        <p class="sub">Matt Grant for Congress — MO-02 primary, August 4, 2026</p>
-        <p class="sub">A Chrome side-panel for voter registration &amp; get-out-the-vote work.</p>
+        <p class="eyebrow">Matt Grant for Congress — MO-02</p>
+        <h1>Turn your time into turnout.</h1>
+        <p class="lede">
+          <strong>Campaign Tools</strong> is a Chrome side-panel that turns voter registration and
+          get-out-the-vote work into one simple, do-the-next-thing queue — so every hour you give
+          reaches more voters and helps win the August 4 primary.
+        </p>
+        <!-- CAMPAIGN: optional tagline / "why Matt" line — replace the text below (kept honest by default). -->
+        <p class="tagline">Every neighbor you register and every vote you turn out gets Matt one step closer.</p>
+
+        <div class="cta-row">
+          <a class="dl" href="#get">⬇ Get the extension</a>
+          <a class="ghost" href="#how">See how it works</a>
+        </div>
+        <p class="dl-note">Free · runs in Chrome, Edge, or Brave on a computer · about 2 minutes to set up.</p>
+
+        <div class="phases">
+          <div class="phase"><p class="k">Register</p><p class="d">by <strong>Jul 8</strong></p></div>
+          <div class="phase"><p class="k">Make a plan</p><p class="d">by <strong>Jul 20</strong></p></div>
+          <div class="phase"><p class="k">Turn out</p><p class="d">by <strong>Aug 4</strong></p></div>
+        </div>
+        <p class="countdown" id="countdown"></p>
       </header>
 
-      <div class="card" style="text-align: center">
+      <div class="card" id="how">
+        <h2>Why it matters</h2>
+        <div class="why">
+          <div class="item">
+            <h3>Primaries are won on turnout</h3>
+            <p>An August primary comes down to who actually shows up. Every registration and vote plan
+              you log moves that number in Matt's direction.</p>
+          </div>
+          <div class="item">
+            <h3>One place, not ten</h3>
+            <p>Trade scattered spreadsheets, group texts, and paper lists for a single queue that tells
+              you the next best thing to do.</p>
+          </div>
+          <div class="item">
+            <h3>Nothing falls through</h3>
+            <p>A conversation today becomes a reminder next week and a vote on August 4 — the tool keeps
+              the follow-through from slipping.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>What you'll actually do</h2>
+        <div class="roles-grid">
+          <div class="role"><p class="name">Registration</p>
+            <p>Find neighbors who aren't registered and get them signed up before the July 8 deadline.</p></div>
+          <div class="role"><p class="name">Voter contact</p>
+            <p>Turn undecided voters into concrete vote plans, and log every conversation in one tap.</p></div>
+          <div class="role"><p class="name">List &amp; data</p>
+            <p>Import and tag voter lists so the right people get the right message.</p></div>
+          <div class="role"><p class="name">Events</p>
+            <p>Spin up registration drives and canvasses, and fill volunteer shifts.</p></div>
+          <div class="role"><p class="name">Comms</p>
+            <p>Draft texts and emails from approved templates — no guesswork, no typos.</p></div>
+          <div class="role"><p class="name">Compliance &amp; Admin</p>
+            <p>Approve messages, handle opt-outs, keep a clean audit trail, and switch teammates on.</p></div>
+        </div>
+        <ul class="features">
+          <li>Next-best-action queue</li>
+          <li>One-tap conversation logging</li>
+          <li>Vote-plan capture</li>
+          <li>Polling-place lookup</li>
+          <li>Follow-up reminders</li>
+          <li>Batch texts to not-yet-voted</li>
+          <li>Live turnout dashboard</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>Compliant by design</h2>
+        <p class="dl-note" style="margin:0 0 8px">You focus on voters; the guardrails are built in.</p>
+        <div class="why">
+          <div class="item"><h3>Approved messages only</h3>
+            <p>Texts and emails send from templates a compliance clerk has approved.</p></div>
+          <div class="item"><h3>Right hours, opt-outs honored</h3>
+            <p>Texts only go out during allowed hours, and anyone who replies STOP is removed automatically.</p></div>
+          <div class="item"><h3>Everything is logged</h3>
+            <p>Every action is recorded in a tamper-evident audit trail — accountable and clean.</p></div>
+        </div>
+      </div>
+
+      <div class="card" id="get" style="text-align: center">
         <h2>Get the extension</h2>
         <a class="dl" href="/download/matt-grant-campaign-tools.zip" download>
           ⬇ Download for Chrome
@@ -133,21 +258,6 @@
       </div>
 
       <div class="card">
-        <h2>What each role can do</h2>
-        <table class="roles">
-          <tr><td>Registration</td><td>Reach voters about registering; send approved registration texts.</td></tr>
-          <tr><td>Voter contact</td><td>GOTV outreach and logging voter conversations.</td></tr>
-          <tr><td>List data</td><td>Import and tag voter lists.</td></tr>
-          <tr><td>Events</td><td>Manage events and volunteer shifts.</td></tr>
-          <tr><td>Comms</td><td>Draft and send approved messages.</td></tr>
-          <tr><td>Compliance</td><td>Approvals, opt-outs, and the audit log.</td></tr>
-          <tr><td>Admin</td><td>Everything, including assigning roles.</td></tr>
-        </table>
-        <div class="tip">🛡️ Built-in guardrails: texts only go out during allowed hours, messages need
-          approval, and anyone who opts out is removed automatically.</div>
-      </div>
-
-      <div class="card">
         <h2>Voter resources (Missouri)</h2>
         <p class="dl-note" style="margin: 0 0 10px">Official links for registering and voting in
           Missouri's 2nd Congressional District.</p>
@@ -167,7 +277,8 @@
         </ul>
         <p class="dates">
           Key dates — Missouri primary: <strong>August 4, 2026</strong> ·
-          registration deadline: <strong>about July 8, 2026</strong> (roughly four weeks before).
+          early voting begins: <strong>July 21, 2026</strong> ·
+          registration deadline: <strong>about July 8, 2026</strong>.
         </p>
       </div>
 
@@ -186,5 +297,18 @@
         <a href="/guide/">User guide</a>
       </footer>
     </div>
+
+    <script>
+      // Dependency-free countdown to the MO-02 primary (Aug 4, 2026).
+      (function () {
+        var el = document.getElementById("countdown");
+        if (!el) return;
+        var primary = new Date("2026-08-04T00:00:00-05:00"); // Central time
+        var days = Math.ceil((primary - new Date()) / 86400000);
+        if (days > 1) el.innerHTML = "<b>" + days + " days</b> until the primary — every one counts.";
+        else if (days === 1) el.innerHTML = "<b>1 day</b> until the primary — turn out every vote.";
+        else if (days === 0) el.innerHTML = "<b>Primary day.</b> Polls are open — get out the vote!";
+      })();
+    </script>
   </body>
 </html>
