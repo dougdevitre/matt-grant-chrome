@@ -19,5 +19,13 @@ describe("public distribution site", () => {
     expect(res.headers["content-type"]).toMatch(/text\/html/);
     expect(res.text).toContain("Campaign Tools");
     expect(res.text).toContain("/download/matt-grant-campaign-tools.zip");
+    expect(res.text).toContain('href="/guide/"'); // footer link to the guide
+  });
+
+  it("serves the user guide page at /guide/ without auth", async () => {
+    const res = await request(app).get("/guide/");
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toMatch(/text\/html/);
+    expect(res.text).toContain("user guide");
   });
 });
