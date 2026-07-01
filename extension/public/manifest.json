@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtEH06kzuvNsF1EoSrzyW1hUoKrhE3sgLUy1E8qD63a79eqCSPkcX+hmbjG59n7igbi7HcfC3rKRiaE4XaBUbFg/0I4FJJ/1rL4pjBbEr/1I006zEJ0SId0qCfqzTd+KkeEMuydrYo1Kd4USvSNdTBetj+QTwO8AweZc0oz0a0bgLFPu5309a5fgavyFSWq00xTL5Egrclre644UoyzwLSDXiTSJDBc4dAsiv1jiAXkyni7zUhSqEe/Vd2emEq+sm7BZCmbXemdlUlVtxzBBqFoZPYzPNij4zJT9Jy7c72IjkRWjPu9WlLlcyDdKVxUJyqbma2+tob5n9DDRkHP23AwIDAQAB",
-  "name": "Matt Grant for Congress — Clerk Tools",
+  "name": "Matt Grant for Congress — Campaign Tools",
   "version": "0.1.0",
-  "description": "Role-aware clerk productivity panel for voter registration and GOTV (MO-02, Aug 4 2026).",
+  "description": "Role-aware campaign productivity panel for voter registration and GOTV (MO-02, Aug 4 2026).",
   "action": {
-    "default_title": "Open clerk panel",
+    "default_title": "Open Campaign Tools",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",

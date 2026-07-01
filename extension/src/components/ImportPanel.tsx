@@ -14,12 +14,17 @@ export function ImportPanel({ canRead }: { canRead: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [contacts, setContacts] = useState<Contact[] | null>(null);
   const [total, setTotal] = useState(0);
+  const [notVoted, setNotVoted] = useState(false);
 
   // Load one page; offset 0 replaces the list (fresh load), otherwise appends.
-  async function loadContacts(offset = 0) {
+  async function loadContacts(offset = 0, onlyNotVoted = notVoted) {
     if (!canRead) return;
     try {
-      const page = await api.contactsPage({ limit: PAGE_SIZE, offset });
+      const page = await api.contactsPage({
+        limit: PAGE_SIZE,
+        offset,
+        notVoted: onlyNotVoted,
+      });
       setTotal(page.total);
       setContacts((prev) =>
         offset === 0 ? page.items : [...(prev ?? []), ...page.items]
@@ -27,6 +32,11 @@ export function ImportPanel({ canRead }: { canRead: boolean }) {
     } catch {
       /* contacts list is optional; ignore */
     }
+  }
+
+  function toggleNotVoted(next: boolean) {
+    setNotVoted(next);
+    loadContacts(0, next);
   }
 
   useEffect(() => {
@@ -138,6 +148,14 @@ export function ImportPanel({ canRead }: { canRead: boolean }) {
             Contacts ({contacts.length}
             {total > contacts.length ? ` of ${total}` : ""})
           </h2>
+          <label className="note filter-toggle">
+            <input
+              type="checkbox"
+              checked={notVoted}
+              onChange={(e) => toggleNotVoted(e.target.checked)}
+            />{" "}
+            Not yet voted (GOTV)
+          </label>
           {contacts.map((c) => (
             <div className="contact" key={c.id}>
               <div>

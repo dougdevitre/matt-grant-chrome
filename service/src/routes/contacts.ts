@@ -11,7 +11,7 @@ import {
 import { getStore } from "../lib/store.js";
 import { pathParam, queryStr } from "../lib/http.js";
 import { parsePageParams, applyPage } from "../lib/pagination.js";
-import type { ContactDisposition, RegStatus } from "../lib/types.js";
+import type { ContactDisposition, RegStatus, VoteStatus } from "../lib/types.js";
 
 export const contactsRouter = Router();
 
@@ -22,6 +22,10 @@ const DISPOSITIONS: ContactDisposition[] = [
   "opposed",
   "registered",
   "opted_out",
+  "pledged_to_vote",
+  "voted_early",
+  "voted_absentee",
+  "voted_election_day",
 ];
 
 // Each import row triggers a geocode lookup, so cap rows to bound the outbound
@@ -56,13 +60,16 @@ contactsRouter.post("/import/commit", requireScope("list.import"), async (req, r
   res.status(201).json(await commitImport(req.body.csv, req.clerk!.clerkId));
 });
 
-// GET /contacts?zip=&regStatus=&limit=&offset=
+// GET /contacts?zip=&regStatus=&voteStatus=&notVoted=&limit=&offset=
 contactsRouter.get("/", requireScope("voter.read"), async (req, res) => {
   const store = await getStore();
   const zip = queryStr(req, "zip");
   const rs = queryStr(req, "regStatus");
   const regStatus = rs ? (rs as RegStatus) : null;
-  const all = await store.listContacts({ zip, regStatus });
+  const vs = queryStr(req, "voteStatus");
+  const voteStatus = vs ? (vs as VoteStatus) : null;
+  const notVoted = queryStr(req, "notVoted") === "true";
+  const all = await store.listContacts({ zip, regStatus, voteStatus, notVoted });
   res.setHeader("X-Total-Count", String(all.length));
   res.json(applyPage(all, parsePageParams(req)));
 });

@@ -16,9 +16,10 @@ import { TaskQueue } from "./components/TaskQueue.js";
 import { Scheduler } from "./components/Scheduler.js";
 import { ImportPanel } from "./components/ImportPanel.js";
 import { CommsPanel } from "./components/CommsPanel.js";
+import { TurnoutPanel } from "./components/TurnoutPanel.js";
 import { SignIn } from "./components/SignIn.js";
 
-type Tab = "local" | "tasks" | "schedule" | "import" | "comms";
+type Tab = "local" | "tasks" | "schedule" | "import" | "comms" | "turnout";
 
 export default function App() {
   const [me, setMe] = useState<ClerkIdentity | null>(null);
@@ -92,6 +93,7 @@ export default function App() {
     { id: "local", label: "Local" },
     { id: "tasks", label: "Tasks" },
     { id: "schedule", label: "Schedule" },
+    ...(canRead ? [{ id: "turnout" as Tab, label: "Turnout" }] : []),
     ...(canImport ? [{ id: "import" as Tab, label: "Import" }] : []),
     ...(canComms ? [{ id: "comms" as Tab, label: "Comms" }] : []),
   ];
@@ -100,7 +102,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="hdr">
-        <h1>Matt Grant — Clerk Tools</h1>
+        <h1><img className="hdr-logo" src="icons/icon48.png" alt="" /> Matt Grant — Campaign Tools</h1>
         {me ? (
           <button className="role-chip linklike" onClick={handleSignOut} title="Sign out">
             {ROLE_LABELS[me.role]} ·&nbsp;exit
@@ -134,6 +136,7 @@ export default function App() {
       {activeTab === "schedule" && me ? (
         <Scheduler me={me} county={county} zip={zip} />
       ) : null}
+      {activeTab === "turnout" ? <TurnoutPanel /> : null}
       {activeTab === "import" ? <ImportPanel canRead={canRead} /> : null}
       {activeTab === "comms" && me ? <CommsPanel me={me} /> : null}
     </div>

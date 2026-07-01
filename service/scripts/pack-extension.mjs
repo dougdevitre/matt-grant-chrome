@@ -9,8 +9,8 @@
 // extension/scripts/make-icons.mjs.
 //
 // Input:  extension/dist  (produced by `npm run build:extension`)
-// Output: service/public/download/matt-grant-clerk-extension.zip
-//         (entries live under a top-level `matt-grant-clerk-extension/` folder
+// Output: service/public/download/matt-grant-campaign-tools.zip
+//         (entries live under a top-level `matt-grant-campaign-tools/` folder
 //          so unzipping yields one clean folder to "Load unpacked").
 // Run after building the extension: `node service/scripts/pack-extension.mjs`.
 
@@ -22,8 +22,8 @@ import { dirname, resolve, join, relative } from "node:path";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DIST = resolve(HERE, "../../extension/dist");
 const OUT_DIR = resolve(HERE, "../public/download");
-const OUT = resolve(OUT_DIR, "matt-grant-clerk-extension.zip");
-const TOP = "matt-grant-clerk-extension"; // folder name inside the zip
+const OUT = resolve(OUT_DIR, "matt-grant-campaign-tools.zip");
+const TOP = "matt-grant-campaign-tools"; // folder name inside the zip
 
 const CRC_TABLE = (() => {
   const t = new Uint32Array(256);

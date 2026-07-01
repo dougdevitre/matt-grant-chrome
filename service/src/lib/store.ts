@@ -13,6 +13,7 @@ import type {
   RegStatus,
   Shift,
   Task,
+  VoteStatus,
 } from "./types.js";
 
 export type NewTask = Omit<
@@ -31,6 +32,9 @@ export type NewContactLog = Omit<ContactLog, "id" | "createdAt">;
 export interface ContactFilter {
   zip?: string | null;
   regStatus?: RegStatus | null;
+  voteStatus?: VoteStatus | null;
+  /** GOTV: keep only contacts not yet recorded as "voted" (the turnout queue). */
+  notVoted?: boolean;
   assignedClerkId?: string | null;
 }
 

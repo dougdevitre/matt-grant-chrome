@@ -100,3 +100,72 @@ describe("contacts optimistic locking", () => {
     expect(res.body.error).toBe("contact_not_found");
   });
 });
+
+describe("GOTV turnout dispositions", () => {
+  async function logDisp(id: string, disposition: string) {
+    return request(app)
+      .post(`/contacts/${id}/logs`)
+      .set("Authorization", admin())
+      .send({ channel: "call", disposition });
+  }
+  async function getContact(id: string) {
+    const res = await request(app)
+      .get(`/contacts/${id}`)
+      .set("Authorization", admin());
+    expect(res.status).toBe(200);
+    return res.body;
+  }
+
+  it("records an early vote onto the contact (status/method/votedAt + version bump)", async () => {
+    const { id, version } = await firstContactId();
+    const r = await logDisp(id, "voted_early");
+    expect(r.status).toBe(201);
+    const c = await getContact(id);
+    expect(c.voteStatus).toBe("early_voted");
+    expect(c.voteMethod).toBe("early_in_person");
+    expect(typeof c.votedAt).toBe("string");
+    expect(c.version).toBeGreaterThan(version);
+  });
+
+  it("maps pledged_to_vote → plan_made and election-day → voted", async () => {
+    const list = await request(app).get("/contacts").set("Authorization", admin());
+    const jordan = list.body[0].id;
+    await logDisp(jordan, "pledged_to_vote");
+    expect((await getContact(jordan)).voteStatus).toBe("plan_made");
+    await logDisp(jordan, "voted_election_day");
+    const c = await getContact(jordan);
+    expect(c.voteStatus).toBe("voted");
+    expect(c.voteMethod).toBe("election_day");
+  });
+
+  it("rejects an unknown disposition", async () => {
+    const { id } = await firstContactId();
+    const r = await logDisp(id, "definitely_not_valid");
+    expect(r.status).toBe(400);
+    expect(r.body.error).toBe("invalid_disposition");
+  });
+});
+
+describe("GOTV not-yet-voted filter", () => {
+  it("excludes contacts who have already cast a ballot", async () => {
+    // Seed: Jordan (unknown) + Avery (early_voted). notVoted drops Avery.
+    const all = await request(app).get("/contacts").set("Authorization", admin());
+    expect(all.body.length).toBe(2);
+    const res = await request(app)
+      .get("/contacts?notVoted=true")
+      .set("Authorization", admin());
+    expect(res.status).toBe(200);
+    expect(res.body.length).toBe(1);
+    expect(res.headers["x-total-count"]).toBe("1");
+    expect(res.body[0].voteStatus).not.toBe("early_voted");
+  });
+
+  it("filters by an explicit voteStatus", async () => {
+    const res = await request(app)
+      .get("/contacts?voteStatus=early_voted")
+      .set("Authorization", admin());
+    expect(res.status).toBe(200);
+    expect(res.body.length).toBe(1);
+    expect(res.body[0].voteStatus).toBe("early_voted");
+  });
+});

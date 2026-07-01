@@ -148,3 +148,22 @@ describe("SMS quiet hours (TCPA)", () => {
     expect(res.body.status).toBe("sent");
   });
 });
+
+describe("seeded GOTV turnout templates", () => {
+  it("ships turnout scripts, left unapproved for compliance", async () => {
+    const res = await request(app)
+      .get("/comms/templates")
+      .set("Authorization", bearer(tokenFor("admin")));
+    expect(res.status).toBe(200);
+    const turnout = res.body.filter(
+      (t: { category: string }) => t.category === "turnout"
+    );
+    expect(turnout.length).toBeGreaterThanOrEqual(3);
+    // Seeded as drafts (must be approved before they can be sent) and carry the
+    // STOP opt-out language the SMS guard requires.
+    for (const t of turnout) {
+      expect(t.complianceApprovalId).toBeNull();
+      expect(t.hasOptOut).toBe(true);
+    }
+  });
+});

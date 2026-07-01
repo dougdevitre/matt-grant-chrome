@@ -55,7 +55,7 @@ export function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
   return (
     <div className="app">
       <header className="hdr">
-        <h1>Matt Grant — Clerk Tools</h1>
+        <h1><img className="hdr-logo" src="icons/icon48.png" alt="" /> Matt Grant — Campaign Tools</h1>
       </header>
       <p className="note">Sign in to load your queue and tools.</p>
 

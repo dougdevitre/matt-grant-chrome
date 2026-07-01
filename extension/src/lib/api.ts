@@ -6,6 +6,7 @@ import type {
   ClerkIdentity,
   Contact,
   EventWithShifts,
+  GotvDashboard,
   ImportPreview,
   ImportResult,
   LocationInput,
@@ -122,14 +123,21 @@ export const api = {
     offset: number;
     zip?: string | null;
     regStatus?: string | null;
+    voteStatus?: string | null;
+    notVoted?: boolean;
   }) => {
     const qs = new URLSearchParams();
     qs.set("limit", String(opts.limit));
     qs.set("offset", String(opts.offset));
     if (opts.zip) qs.set("zip", opts.zip);
     if (opts.regStatus) qs.set("regStatus", opts.regStatus);
+    if (opts.voteStatus) qs.set("voteStatus", opts.voteStatus);
+    if (opts.notVoted) qs.set("notVoted", "true");
     return callList<Contact>(`/contacts?${qs.toString()}`);
   },
+
+  // GOTV turnout dashboard (counts only).
+  gotvDashboard: () => call<GotvDashboard>("/dashboard/gotv"),
   importPreview: (csv: string) =>
     call<ImportPreview>("/contacts/import/preview", {
       method: "POST",

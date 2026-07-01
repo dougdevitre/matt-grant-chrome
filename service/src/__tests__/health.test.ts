@@ -17,7 +17,7 @@ describe("public distribution site", () => {
     const res = await request(app).get("/");
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toMatch(/text\/html/);
-    expect(res.text).toContain("Clerk Tools");
-    expect(res.text).toContain("/download/matt-grant-clerk-extension.zip");
+    expect(res.text).toContain("Campaign Tools");
+    expect(res.text).toContain("/download/matt-grant-campaign-tools.zip");
   });
 });

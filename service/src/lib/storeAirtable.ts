@@ -251,6 +251,14 @@ export async function makeAirtableStore(): Promise<StorePort> {
       return (await listAll<Contact>("Contacts")).filter((c) => {
         if (filter.zip && c.zip !== filter.zip) return false;
         if (filter.regStatus && c.regStatus !== filter.regStatus) return false;
+        if (filter.voteStatus && c.voteStatus !== filter.voteStatus) return false;
+        // notVoted = still needs to turn out: exclude anyone who has cast a
+        // ballot already (early/absentee counts as voted).
+        if (
+          filter.notVoted &&
+          (c.voteStatus === "voted" || c.voteStatus === "early_voted")
+        )
+          return false;
         if (filter.assignedClerkId && c.assignedClerkId !== filter.assignedClerkId)
           return false;
         return true;
