@@ -1,9 +1,13 @@
 // Build-time Clerk config. The publishable key is public (safe to ship in the
-// bundle) and is injected via Vite env (`VITE_CLERK_PUBLISHABLE_KEY`). When it's
-// absent — local dev / CI — the extension runs Clerk-disabled: the Dev sign-in
-// and the legacy paste fallback are used instead, so nothing requires a key.
+// bundle). Order: explicit `VITE_CLERK_PUBLISHABLE_KEY` → the production key for
+// any production build → empty for local dev / CI, where the extension runs
+// Clerk-disabled (Dev sign-in + the legacy paste fallback), so nothing local
+// requires a key.
+const PROD_PUBLISHABLE_KEY = "pk_live_Y2xlcmsubWF0dGdyYW50Zm9yY29uZ3Jlc3Mub3JnJA";
 
-export const PUBLISHABLE_KEY: string = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY ?? "";
+export const PUBLISHABLE_KEY: string =
+  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY ||
+  (import.meta.env.PROD ? PROD_PUBLISHABLE_KEY : "");
 
 // Optional Clerk JWT template name that injects a `role` claim from
 // `publicMetadata.role`. Leave unset if the default session token already
