@@ -29,11 +29,14 @@ are for human-readable filtering in the Airtable UI.
 | `OptOut`       | `ContactKey` **(read)**                                    |
 | `Outbox`       | `IdempotencyKey` **(read)**, `Status`                      |
 | `Audit`        | `Action`, `Seq` (number) **(read)**, `Hash`                |
+| `FollowUps`    | `RecordId` **(read)**, `ContactId`, `Status`               |
 
 Notes:
 - `RecordId` holds our own UUID (not Airtable's `rec…` id); the adapter upserts by matching it.
 - `ContactKey` is the opaque, non-reversible recipient key (no raw PII is stored).
 - `IdempotencyKey` makes the outbox replay check a point read, preserving send idempotency.
+- `FollowUps` backs the GOTV reminder feature (`/followups`, `POST /contacts/:id/followups`, and the
+  Turnout tab's reminders list). Without this table, those endpoints 500 under `STORE_DRIVER=airtable`.
 
 ## Verifying
 

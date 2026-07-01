@@ -33,6 +33,23 @@ jobs:
       - uses: actions/checkout@v7
       - name: Build the production image
         run: docker build -t matt-grant-chrome-service .
+      # Prove the image actually serves the landing page and the packaged
+      # download zip (regression net for the "/download 404" gap: the zip must
+      # be built + copied into the image, not just referenced by the page).
+      # NODE_ENV=development bypasses the prod boot guard for this smoke test.
+      - name: Verify landing page + download zip are served
+        run: |
+          docker run -d --name mgc -e NODE_ENV=development -p 8787:8787 matt-grant-chrome-service
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost:8787/health && break
+            sleep 1
+          done
+          curl -fsS http://localhost:8787/ | grep -q "Campaign Tools"
+          status_ct=$(curl -s -o /dev/null -w '%{http_code} %{content_type}' \
+            http://localhost:8787/download/matt-grant-campaign-tools.zip)
+          echo "download endpoint -> $status_ct"
+          echo "$status_ct" | grep -q '^200 application/zip'
+          docker rm -f mgc
 
   audit:
     runs-on: ubuntu-latest
