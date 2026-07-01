@@ -4,6 +4,8 @@
 import "express-async-errors"; // forward async route rejections to the error handler
 import express from "express";
 import cors from "cors";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
 import { ALLOWED_ORIGIN, NODE_ENV, PORT, assertSecureStartup } from "./config.js";
 import { authenticate } from "./auth.js";
 import { authRouter } from "./routes/auth.js";
@@ -47,6 +49,15 @@ app.use(
     exposedHeaders: ["X-Total-Count"],
   })
 );
+
+// Public distribution site (no auth): a landing page at `/` with a Download
+// button + install/usage instructions, and the packaged extension zip under
+// `/download/`. Served from `service/public/` (the zip is produced at build
+// time by scripts/pack-extension.mjs). Mounted before `authenticate` so it's
+// reachable without a token; it can't clash with the API, which lives under
+// named prefixes (/auth, /me, /tasks, …).
+const publicDir = resolve(dirname(fileURLToPath(import.meta.url)), "../public");
+app.use(express.static(publicDir, { index: "index.html", maxAge: "1h" }));
 
 // Liveness (no auth): the process is up.
 app.get("/health", (_req, res) => res.json({ ok: true }));
