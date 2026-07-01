@@ -1,5 +1,6 @@
 {
   "manifest_version": 3,
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtEH06kzuvNsF1EoSrzyW1hUoKrhE3sgLUy1E8qD63a79eqCSPkcX+hmbjG59n7igbi7HcfC3rKRiaE4XaBUbFg/0I4FJJ/1rL4pjBbEr/1I006zEJ0SId0qCfqzTd+KkeEMuydrYo1Kd4USvSNdTBetj+QTwO8AweZc0oz0a0bgLFPu5309a5fgavyFSWq00xTL5Egrclre644UoyzwLSDXiTSJDBc4dAsiv1jiAXkyni7zUhSqEe/Vd2emEq+sm7BZCmbXemdlUlVtxzBBqFoZPYzPNij4zJT9Jy7c72IjkRWjPu9WlLlcyDdKVxUJyqbma2+tob5n9DDRkHP23AwIDAQAB",
   "name": "Matt Grant for Congress — Clerk Tools",
   "version": "0.1.0",
   "description": "Role-aware clerk productivity panel for voter registration and GOTV (MO-02, Aug 4 2026).",
@@ -16,9 +17,18 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "background": { "service_worker": "background.js", "type": "module" },
-  "side_panel": { "default_path": "index.html" },
-  "permissions": ["sidePanel", "storage", "cookies"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "side_panel": {
+    "default_path": "index.html"
+  },
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "cookies"
+  ],
   "host_permissions": [
     "http://localhost:8787/*",
     "https://clerk.mattgrantforcongress.org/*",
