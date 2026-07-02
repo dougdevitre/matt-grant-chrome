@@ -37,7 +37,27 @@
     "https://*.sos.mo.gov/*",
     "https://airtable.com/*",
     "https://*.airtable.com/*",
-    "https://docs.google.com/*"
+    "https://docs.google.com/*",
+    "https://stlouiscountymo.gov/*",
+    "https://*.stlouiscountymo.gov/*",
+    "https://sccmo.org/*",
+    "https://*.sccmo.org/*",
+    "https://franklinmo.org/*",
+    "https://*.franklinmo.org/*",
+    "https://warrencountymoclerk.com/*",
+    "https://*.warrencountymoclerk.com/*",
+    "https://mail.google.com/*",
+    "https://calendar.google.com/*",
+    "https://winred.com/*",
+    "https://*.winred.com/*",
+    "https://x.com/*",
+    "https://twitter.com/*",
+    "https://facebook.com/*",
+    "https://*.facebook.com/*",
+    "https://instagram.com/*",
+    "https://*.instagram.com/*",
+    "https://youtube.com/*",
+    "https://*.youtube.com/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"

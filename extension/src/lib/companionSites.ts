@@ -59,6 +59,57 @@ export const COMPANION_SITES: CompanionSite[] = [
     body: "Download the sheet as CSV, then use the Import tab in this panel to load your voter list.",
     actions: [],
   },
+  {
+    id: "county-office",
+    hostSuffixes: [
+      "stlouiscountymo.gov",
+      "sccmo.org",
+      "franklinmo.org",
+      "warrencountymoclerk.com",
+    ],
+    anyScopes: ["voter.read"],
+    title: "You're on a county election office site",
+    body: "This is a MO-02 Local Election Authority. Key dates: register by Jul 8, primary Aug 4.",
+    actions: [
+      { label: "Check status", url: SOS_STATUS },
+      { label: "Find polling place", url: SOS_POLLING },
+    ],
+  },
+  {
+    id: "gmail",
+    hostSuffixes: ["mail.google.com"],
+    anyScopes: ["contact.log"],
+    title: "Working in Gmail",
+    body: "Emailing a voter? Log the outreach in your Tasks / Contacts tab so it's tracked and compliant.",
+    actions: [],
+  },
+  {
+    id: "calendar",
+    hostSuffixes: ["calendar.google.com"],
+    anyScopes: ["events.write"],
+    title: "Working in Google Calendar",
+    body: "Add campaign events and volunteer shifts from the Schedule tab so they reach clerks.",
+    actions: [],
+  },
+  {
+    id: "winred",
+    hostSuffixes: ["winred.com"],
+    anyScopes: ["finance.read"],
+    title: "Working in WinRed",
+    body: "Fundraising only — never mix a donor ask into GOTV texts. Keep the FEC record in the budget base.",
+    actions: [],
+  },
+  {
+    id: "social",
+    hostSuffixes: ["x.com", "twitter.com", "facebook.com", "instagram.com", "youtube.com"],
+    anyScopes: ["comms.draft"],
+    title: "Posting on social",
+    body: "Pull an approved template from the Comms tab. Post only compliant, approved messages.",
+    actions: [],
+  },
+  // Voter-file companion (VAN/PDI/L2/GOP Data Center/i360) is intentionally
+  // deferred until the campaign confirms which platform they use — its host
+  // must be added here AND to manifest host_permissions.
 ];
 
 const hostMatches = (host: string, suffix: string): boolean =>
