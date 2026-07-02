@@ -121,6 +121,19 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ shiftId }),
     }),
+  inviteVolunteer: (input: {
+    displayName: string;
+    email: string;
+    phone?: string;
+    teamId?: string;
+  }) => call<TeamMember>("/team", { method: "POST", body: JSON.stringify(input) }),
+  removeVolunteer: (id: string) =>
+    call<{ status: string }>(`/team/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  nudgeVolunteer: (clerkId: string, message: string) =>
+    call<{ sent: boolean; note?: string }>(`/team/${encodeURIComponent(clerkId)}/nudge`, {
+      method: "POST",
+      body: JSON.stringify({ message }),
+    }),
 
   // Tasks
   tasks: (zip?: string | null) =>

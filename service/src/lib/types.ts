@@ -54,7 +54,9 @@ export interface ClerkIdentity {
 // display names and the captain→volunteer link.
 export interface TeamMember {
   id: string;
-  clerkId: string; // the volunteer's Clerk subject (matches JWT `sub`)
+  // The volunteer's Clerk subject (matches JWT `sub`), or null while the invite
+  // is pending — bound when that person first signs in with the invited email.
+  clerkId: string | null;
   displayName: string;
   email: string | null;
   phone: string | null;
@@ -236,7 +238,7 @@ export interface AuditEvent {
   ts: string;
   clerkId: string;
   action: string;
-  entity: "task" | "event" | "shift" | "template" | "send" | "optout" | "contact" | "followup";
+  entity: "task" | "event" | "shift" | "template" | "send" | "optout" | "contact" | "followup" | "team";
   entityId: string;
   // Tamper-evident hash chain (filled by the store on append).
   seq?: number;

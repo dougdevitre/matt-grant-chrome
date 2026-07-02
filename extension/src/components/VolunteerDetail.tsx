@@ -18,6 +18,8 @@ export function VolunteerDetail({
   const [assignable, setAssignable] = useState<Task[]>([]);
   const [pick, setPick] = useState("");
   const [busy, setBusy] = useState(false);
+  const [nudgeMsg, setNudgeMsg] = useState("");
+  const [nudgeNote, setNudgeNote] = useState<string | null>(null);
 
   async function load() {
     setError(null);
@@ -54,6 +56,22 @@ export function VolunteerDetail({
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "assign_failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function nudge() {
+    if (!nudgeMsg.trim()) return;
+    setBusy(true);
+    setError(null);
+    setNudgeNote(null);
+    try {
+      const r = await api.nudgeVolunteer(clerkId, nudgeMsg.trim());
+      setNudgeMsg("");
+      setNudgeNote(r.sent ? "Reminder sent." : "Saved, but email isn't configured — no message went out.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "nudge_failed");
     } finally {
       setBusy(false);
     }
@@ -128,6 +146,23 @@ export function VolunteerDetail({
             </button>
           </div>
           {error ? <div className="warn" role="alert">{messageForError(error)}</div> : null}
+        </div>
+      ) : null}
+
+      {canManage ? (
+        <div className="nudge">
+          <label className="k">Nudge</label>
+          <div className="row">
+            <input
+              placeholder="Quick reminder…"
+              value={nudgeMsg}
+              onChange={(e) => setNudgeMsg(e.target.value)}
+            />
+            <button className="btn" disabled={busy || !nudgeMsg.trim()} onClick={nudge}>
+              Send
+            </button>
+          </div>
+          {nudgeNote ? <div className="ok-note">{nudgeNote}</div> : null}
         </div>
       ) : null}
     </div>

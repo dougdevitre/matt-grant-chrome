@@ -107,8 +107,11 @@ export interface StorePort {
   putFollowUp(followUp: FollowUp): Promise<FollowUp>;
   // team roster
   listTeamMembers(filter?: TeamMemberFilter): Promise<TeamMember[]>;
+  getTeamMember(id: string): Promise<TeamMember | undefined>;
   getTeamMemberByClerkId(clerkId: string): Promise<TeamMember | undefined>;
+  getTeamMemberByEmail(email: string): Promise<TeamMember | undefined>;
   createTeamMember(input: NewTeamMember): Promise<TeamMember>;
+  putTeamMember(member: TeamMember): Promise<TeamMember>;
   // audit
   appendAudit(evt: AuditEvent): Promise<void>;
   readAudit(): Promise<AuditEvent[]>;

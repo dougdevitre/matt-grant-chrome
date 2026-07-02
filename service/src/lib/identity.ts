@@ -51,10 +51,16 @@ export interface IdentityVerifier {
 class DevVerifier implements IdentityVerifier {
   constructor(private devSecret: string) {}
   async verify(cred: unknown): Promise<VerifiedIdentity | null> {
-    const c = (cred ?? {}) as { devSecret?: string; sub?: string; role?: string };
+    const c = (cred ?? {}) as {
+      devSecret?: string;
+      sub?: string;
+      role?: string;
+      email?: string;
+    };
     if (!c.devSecret || c.devSecret !== this.devSecret) return null;
     if (!c.sub) return null;
-    return { subject: c.sub, role: asRole(c.role) };
+    // Carry email through like the Clerk verifier, so team invite→bind works in dev too.
+    return { subject: c.sub, role: asRole(c.role), email: c.email ?? null };
   }
 }
 

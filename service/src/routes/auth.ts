@@ -2,6 +2,7 @@ import { Router } from "express";
 import { getConfig } from "../config.js";
 import { getVerifier, mintScopedToken, mintStepUpToken } from "../lib/identity.js";
 import { rateLimit, clientIp } from "../lib/ratelimit.js";
+import { bindPendingVolunteer } from "../lib/team.js";
 
 // Unauthenticated: exchange a Clerk session (or a dev credential) for the
 // short-lived scoped JWT used by every other route.
@@ -35,6 +36,9 @@ authRouter.post("/token", async (req, res) => {
 
   const ttl = Number((await getConfig("TOKEN_TTL_SECONDS")) ?? "3600");
   const token = mintScopedToken(identity, secret, ttl);
+  // If this signer was invited onto a team by email, bind their clerkId now that
+  // they've authenticated (best-effort; never blocks sign-in).
+  await bindPendingVolunteer(identity.email, identity.subject);
   res.json({ token, expiresIn: ttl, role: identity.role });
 });
 
