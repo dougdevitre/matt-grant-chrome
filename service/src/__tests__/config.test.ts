@@ -12,6 +12,7 @@ const TOUCHED = [
   "SMS_DRIVER",
   "STORE_DRIVER",
   "AIRTABLE_PAT",
+  "CONTACT_KEY_SALT",
   "CALENDAR_DRIVER",
   "MAILER_DRIVER",
   "GOOGLE_SA_JSON",
@@ -104,9 +105,32 @@ describe("assertSecureStartup", () => {
   it("flags airtable store driver with a missing PAT", async () => {
     const problems = await runStartup({ ...CLEAN, STORE_DRIVER: "airtable" });
     expect(problems.some((p) => p.includes("AIRTABLE_PAT"))).toBe(true);
-    // ...and passes once the PAT is present.
-    const ok = await runStartup({ ...CLEAN, STORE_DRIVER: "airtable", AIRTABLE_PAT: "pat" });
+    // ...and passes once the PAT and the contact-key salt are present.
+    const ok = await runStartup({
+      ...CLEAN,
+      STORE_DRIVER: "airtable",
+      AIRTABLE_PAT: "pat",
+      CONTACT_KEY_SALT: "salt",
+    });
     expect(ok).toEqual([]);
+  });
+
+  it("flags airtable store driver with a missing CONTACT_KEY_SALT", async () => {
+    const problems = await runStartup({ ...CLEAN, STORE_DRIVER: "airtable", AIRTABLE_PAT: "pat" });
+    expect(problems.some((p) => p.includes("CONTACT_KEY_SALT"))).toBe(true);
+  });
+
+  it("treats an UNSET NODE_ENV as production-like (fails safe)", async () => {
+    // A deploy that forgets NODE_ENV=production must still refuse to boot on an
+    // insecure config rather than silently skipping every check.
+    const problems = await runStartup({
+      ...CLEAN,
+      NODE_ENV: undefined,
+      JWT_SECRET: "dev-only-change-me",
+      ALLOWED_ORIGIN: "*",
+    });
+    expect(problems.some((p) => p.includes("JWT_SECRET"))).toBe(true);
+    expect(problems.some((p) => p.includes("ALLOWED_ORIGIN"))).toBe(true);
   });
 
   it("flags google calendar driver with no service account or token", async () => {

@@ -11,6 +11,7 @@
 
 import jwt from "jsonwebtoken";
 import { getConfig } from "../config.js";
+import { fetchWithTimeout } from "./http.js";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const JWT_BEARER_GRANT = "urn:ietf:params:oauth:grant-type:jwt-bearer";
@@ -82,7 +83,7 @@ export function makeGoogleTokenProvider(
       { algorithm: "RS256", expiresIn: 3600 }
     );
 
-    const res = await fetch(TOKEN_URL, {
+    const res = await fetchWithTimeout(TOKEN_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ grant_type: JWT_BEARER_GRANT, assertion }).toString(),

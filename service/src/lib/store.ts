@@ -63,6 +63,14 @@ export interface StorePort {
   shiftsForClerk(clerkId: string): Promise<Shift[]>;
   getShift(id: string): Promise<Shift | undefined>;
   putShift(shift: Shift): Promise<Shift>;
+  /**
+   * Compare-and-swap write: persist `shift` only if the currently-stored record
+   * still has `expectedVersion`; return the written shift, or null on a version
+   * mismatch (a concurrent claim already moved it). Lets claimShift close the
+   * check-then-write race. The memory store does this atomically; the Airtable
+   * store re-reads immediately before writing (no true transaction available).
+   */
+  putShiftIfVersion(shift: Shift, expectedVersion: number): Promise<Shift | null>;
   createShift(input: NewShift): Promise<Shift>;
   // comms
   listTemplates(): Promise<MessageTemplate[]>;

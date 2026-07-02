@@ -23,12 +23,15 @@ import {
 } from "./publicData.js";
 import { isConsistentSelection, leaIdFor } from "./locationOptions.js";
 import { primaryNames } from "../data/mo02Candidates.js";
-import { NODE_ENV } from "../config.js";
+import { IS_PRODUCTION_LIKE } from "../config.js";
 
 const SOS_REGISTER = "https://www.sos.mo.gov/elections/goVoteMissouri/register";
 const SOS_STATUS = "https://voteroutreach.sos.mo.gov/portal/";
 const SOS_POLLING = "https://www.sos.mo.gov/elections/goVoteMissouri/findyourpollingplace";
 const SOS_BALLOT = "https://www.sos.mo.gov/elections/candidates";
+// Official statewide election results. VERIFY the deep link before GOTV; the
+// SOS elections hub is the guaranteed-live fallback.
+const SOS_RESULTS = "https://www.sos.mo.gov/elections/resultsandstats";
 
 function card(c: ResourceCard): ResourceCard {
   return c;
@@ -48,7 +51,25 @@ function catalog(loc: ResolvedLocation, lea: LeaInfo): ResourceCard[] {
     "PHASE_2_PLAN",
     "PHASE_3_TURNOUT",
   ];
+  // Cards that stay useful after the polls close. Without a PHASE_CLOSED entry
+  // every card filters out and the Local tab renders blank, contradicting the
+  // "View official results" banner. These evergreen cards + the results card
+  // below guarantee the tab always has content.
+  const withClosed: Phase[] = [...allPhases, "PHASE_CLOSED"];
   return [
+    // ---- POST-ELECTION ----
+    card({
+      id: "vote.results",
+      lane: "vote",
+      title: "Official primary results",
+      body: "Polls are closed. See the certified Aug 4 Republican primary results for MO-02.",
+      ctaLabel: "View official results",
+      ctaUrl: SOS_RESULTS,
+      source: "SOS",
+      requiresScope: null,
+      phases: ["PHASE_CLOSED"],
+      confidenceMin: "LOW",
+    }),
     // ---- VOTE ----
     card({
       id: "vote.register",
@@ -71,7 +92,7 @@ function catalog(loc: ResolvedLocation, lea: LeaInfo): ResourceCard[] {
       ctaUrl: SOS_STATUS,
       source: "SOS",
       requiresScope: null,
-      phases: allPhases,
+      phases: withClosed,
       confidenceMin: "LOW",
     }),
     card({
@@ -142,7 +163,7 @@ function catalog(loc: ResolvedLocation, lea: LeaInfo): ResourceCard[] {
       ctaUrl: SOS_BALLOT,
       source: "SOS",
       requiresScope: null,
-      phases: allPhases,
+      phases: withClosed,
       confidenceMin: "LOW",
     }),
     card({
@@ -333,11 +354,18 @@ export async function resolveLocalContext(
   // null/empty and never block the response.
   const enrich =
     process.env.ENRICH_RESOLVE === "true" ||
-    (NODE_ENV === "production" && process.env.ENRICH_RESOLVE !== "false");
+    (IS_PRODUCTION_LIKE && process.env.ENRICH_RESOLVE !== "false");
   if (enrich) {
+    // Scope the enrichment to the same scopes that gate its consuming cards.
+    // The card filter above only hides the *card* — the raw numbers must not be
+    // shipped in the sibling `enrichment` field to a caller who can't see the
+    // card, or the finance.read/events.write gate is UI-only. Demographics ↔
+    // finance.read (issues.demographics); venues ↔ events.write (act.events).
+    const canSeeDemographics = scopes.includes("finance.read");
+    const canSeeVenues = scopes.includes("events.write");
     const [demographics, venues] = await Promise.all([
-      demographicsForZip(input.zip),
-      nearbyVenues(geo.lat, geo.lng),
+      canSeeDemographics ? demographicsForZip(input.zip) : Promise.resolve(null),
+      canSeeVenues ? nearbyVenues(geo.lat, geo.lng) : Promise.resolve([]),
     ]);
     const enrichment: ResolveEnrichment = {
       demographics: demographics

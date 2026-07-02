@@ -1,5 +1,30 @@
 import type { Request } from "express";
 
+/** Default hard timeout for outbound calls to third-party APIs. */
+export const OUTBOUND_TIMEOUT_MS = 8000;
+
+/**
+ * `fetch` with a hard timeout via AbortController. Rejects (AbortError) if the
+ * upstream doesn't respond within `timeoutMs`; callers keep their own error
+ * handling and status mapping. Node's `fetch` has NO default timeout, so a hung
+ * upstream (Airtable/Clerk/Twilio/Google) otherwise ties up an Express worker
+ * indefinitely — the request never settles. A fast, catchable failure is far
+ * better than a silent hang, so every server-to-server call goes through this.
+ */
+export async function fetchWithTimeout(
+  url: string | URL,
+  init: RequestInit = {},
+  timeoutMs = OUTBOUND_TIMEOUT_MS
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /**
  * Read a route `:param` as a single string.
  *

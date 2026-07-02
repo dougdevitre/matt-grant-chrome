@@ -113,6 +113,11 @@ function checkConfig() {
   if (storeDriver === "airtable") {
     if (!env.AIRTABLE_PAT) bad("STORE_DRIVER=airtable but AIRTABLE_PAT is missing");
     else ok("AIRTABLE_PAT is set");
+    // The boot gate now requires a contact-key salt when contacts persist to an
+    // external store (else opt-out/outbox keys are offline-reversible to PII).
+    if (!env.CONTACT_KEY_SALT)
+      bad("STORE_DRIVER=airtable but CONTACT_KEY_SALT is missing (contact keys would be reversible to PII)");
+    else ok("CONTACT_KEY_SALT is set");
   } else {
     note(`STORE_DRIVER=${storeDriver} (data resets on redeploy — set STORE_DRIVER=airtable to persist)`);
   }

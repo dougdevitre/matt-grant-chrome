@@ -52,6 +52,7 @@ describe("getVerifier driver selection", () => {
   });
 
   it("accepts AUTH_DRIVER=dev with a secret (non-prod) and checks it", async () => {
+    process.env.NODE_ENV = "development"; // dev auth is only allowed in relaxed local mode
     process.env.AUTH_DRIVER = "dev";
     process.env.DEV_AUTH_SECRET = "s3cret";
     const v = await getVerifier();
@@ -60,6 +61,19 @@ describe("getVerifier driver selection", () => {
       role: "admin",
     });
     expect(await v.verify({ devSecret: "wrong", sub: "u1" })).toBeNull();
+  });
+
+  it("refuses AUTH_DRIVER=dev when NODE_ENV is unset (fails safe as production-like)", async () => {
+    // A deploy that forgets NODE_ENV=production must not fall back to dev auth,
+    // which would let a caller mint an admin token with the shared dev secret.
+    // IS_PRODUCTION_LIKE is captured at config load, so re-import a fresh module
+    // graph with NODE_ENV unset to exercise the production-like branch.
+    delete process.env.NODE_ENV;
+    process.env.AUTH_DRIVER = "dev";
+    process.env.DEV_AUTH_SECRET = "s3cret";
+    vi.resetModules();
+    const { getVerifier: freshGetVerifier } = await import("../lib/identity.js");
+    await expect(freshGetVerifier()).rejects.toThrow(/disabled in production/);
   });
 });
 

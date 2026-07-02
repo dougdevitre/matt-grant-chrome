@@ -71,24 +71,28 @@ Reviewers require a justification per permission. These map to the current
 | `storage` | Persist the clerk's Service URL, selected location, and the "site tips" toggle across sessions. No PII beyond the clerk's own settings. |
 | `cookies` | Required by `@clerk/chrome-extension` to read the Clerk session on the campaign's Clerk domain so the clerk stays signed in. |
 
-**Host permissions** — each is either the backend, the auth provider, or a site
-the companion card offers context on (link-outs / "working here" tips). None are
-used to inject content that reads page data for exfiltration; they scope the
-companion card and API calls:
+**Host permissions** — the first two are the backend and the auth provider; the
+rest let the panel detect when the clerk's **active tab is on one of these
+campaign-related sites** (hostname only) so it can show a relevant "working here"
+tip. Note: opening a link (the tip's buttons) needs no host permission — these
+grants are solely to read the active tab's origin, and only for these specific
+sites. The extension reads no page content and injects no scripts.
 
 | Host pattern | Why |
 |---|---|
 | `http://localhost:8787/*`, `https://*.awsapprunner.com/*` | Talk to the backend microservice (local dev + deployed App Runner). |
-| `https://clerk.mattgrantforcongress.org/*` | Clerk auth (session token exchange). |
-| `https://sos.mo.gov/*`, `https://*.sos.mo.gov/*` | Official MO SoS registration / polling-place link-outs. |
-| `https://*.airtable.com/*`, `https://docs.google.com/*`, `https://mail.google.com/*`, `https://calendar.google.com/*` | Companion-card deep links to the campaign's working tools. |
-| County authority domains (`stlouiscountymo.gov`, `sccmo.org`, `franklinmo.org`, `warrencountymoclerk.com` + subdomains) | Local Election Authority link-outs for the four MO-02 counties. |
-| `winred.com`, `x.com`/`twitter.com`, `facebook.com`, `instagram.com`, `youtube.com` (+ subdomains) | Context cards for donation + social channels the campaign runs. |
+| `https://clerk.mattgrantforcongress.org/*` | Clerk auth (session token exchange; the Clerk SDK also reads its session cookie here). |
+| `https://sos.mo.gov/*`, `https://*.sos.mo.gov/*` | Detect the official MO SoS voter site to show registration / polling-place tips. |
+| `https://*.airtable.com/*`, `https://docs.google.com/*`, `https://mail.google.com/*`, `https://calendar.google.com/*` | Detect the campaign's working tools to show import / logging / scheduling tips. |
+| County authority domains (`stlouiscountymo.gov`, `sccmo.org`, `franklinmo.org`, `warrencountymoclerk.com` + subdomains) | Detect a MO-02 Local Election Authority site to show a dates/lookup tip. |
+| `winred.com`, `x.com`/`twitter.com`, `facebook.com`, `instagram.com`, `youtube.com` (+ subdomains) | Detect donation + social channels to show a compliance tip. |
 
-> If a reviewer flags host permissions as broad: the companion card only reacts
-> to the active tab's origin to show relevant tips/links; it does not read page
-> content. If you want to shrink the review surface, drop the social/WinRed
-> hosts — they only power contextual cards, not core function.
+> The "working here" tips are user-toggleable (the "site tips" switch in
+> Settings), read only the active tab's hostname — never the path or page
+> content — and are documented in the privacy policy. If a reviewer still wants a
+> smaller surface, the social/WinRed hosts can be dropped: they only power
+> contextual tips, not core function (keep `companionSites.ts` in lockstep with
+> the manifest if you do).
 
 ## Privacy & data disclosures
 

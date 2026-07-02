@@ -6,7 +6,7 @@ import express from "express";
 import cors from "cors";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { ALLOWED_ORIGIN, NODE_ENV, PORT, assertSecureStartup } from "./config.js";
+import { ALLOWED_ORIGIN, IS_PRODUCTION_LIKE, PORT, assertSecureStartup } from "./config.js";
 import { authenticate } from "./auth.js";
 import { authRouter } from "./routes/auth.js";
 import { twilioRouter } from "./routes/twilio.js";
@@ -123,7 +123,7 @@ export { app };
 const problems = await assertSecureStartup();
 if (problems.length > 0) {
   log.error("insecure_configuration_refusing_to_start", { problems });
-  if (NODE_ENV === "production") process.exit(1);
+  if (IS_PRODUCTION_LIKE) process.exit(1);
 }
 
 const isMain =

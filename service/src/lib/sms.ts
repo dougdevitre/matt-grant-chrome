@@ -9,6 +9,7 @@
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { getConfig } from "../config.js";
+import { fetchWithTimeout } from "./http.js";
 
 export interface OutboundSms {
   to: string;
@@ -49,7 +50,7 @@ class TwilioSms implements SmsPort {
       Body: msg.body,
     });
     const auth = Buffer.from(`${this.accountSid}:${this.authToken}`).toString("base64");
-    const res = await fetch(url, {
+    const res = await fetchWithTimeout(url, {
       method: "POST",
       headers: {
         Authorization: `Basic ${auth}`,

@@ -14,7 +14,8 @@
 
 import jwt from "jsonwebtoken";
 import { createPublicKey } from "node:crypto";
-import { getConfig, NODE_ENV } from "../config.js";
+import { getConfig, IS_PRODUCTION_LIKE } from "../config.js";
+import { fetchWithTimeout } from "./http.js";
 import type { Role } from "./types.js";
 
 const KNOWN_ROLES: Role[] = [
@@ -73,7 +74,7 @@ class ClerkVerifier implements IdentityVerifier {
   ) {}
 
   private async loadJwks(): Promise<void> {
-    const res = await fetch(this.jwksUrl);
+    const res = await fetchWithTimeout(this.jwksUrl);
     if (!res.ok) throw new Error("jwks_fetch_failed");
     const body = (await res.json()) as { keys: Jwk[] };
     this.jwks = body.keys;
@@ -141,9 +142,11 @@ export async function getVerifier(): Promise<IdentityVerifier> {
     throw new Error("clerk auth selected but CLERK_JWKS_URL/CLERK_ISSUER missing");
   }
   if (driver === "dev") {
-    // dev driver must never run in production, and requires an explicit secret
-    // (no hardcoded fallback that could ship by accident).
-    if (NODE_ENV === "production") {
+    // dev driver must never run in a deployed (production-like) context, and
+    // requires an explicit secret (no hardcoded fallback that could ship by
+    // accident). Gated on IS_PRODUCTION_LIKE so an unset NODE_ENV on a real
+    // deploy still refuses dev auth rather than failing open.
+    if (IS_PRODUCTION_LIKE) {
       throw new Error("dev auth driver is disabled in production");
     }
     const devSecret = await getConfig("DEV_AUTH_SECRET");

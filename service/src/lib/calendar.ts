@@ -4,6 +4,7 @@
 // (see googleAuth.ts), with a legacy GOOGLE_CALENDAR_TOKEN bearer as fallback.
 
 import { getConfig } from "../config.js";
+import { fetchWithTimeout } from "./http.js";
 import {
   hasServiceAccount,
   makeGoogleTokenProvider,
@@ -61,7 +62,7 @@ export class GoogleCalendarAdapter implements CalendarPort {
       return { ok: false, error: e instanceof Error ? e.message : "token_error" };
     }
 
-    const res = await fetch(url, {
+    const res = await fetchWithTimeout(url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,

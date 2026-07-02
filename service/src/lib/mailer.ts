@@ -4,6 +4,7 @@
 // account (see googleAuth.ts), with a legacy GMAIL_TOKEN bearer as fallback.
 
 import { getConfig } from "../config.js";
+import { fetchWithTimeout } from "./http.js";
 import {
   hasServiceAccount,
   makeGoogleTokenProvider,
@@ -59,7 +60,7 @@ export class GmailAdapter implements MailerPort {
       return { ok: false, error: e instanceof Error ? e.message : "token_error" };
     }
 
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
       {
         method: "POST",

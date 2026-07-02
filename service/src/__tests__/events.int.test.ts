@@ -5,7 +5,8 @@
 import request from "supertest";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { app } from "../index.js";
-import { resetStoreForTests } from "../lib/store.js";
+import { getStore, resetStoreForTests } from "../lib/store.js";
+import { claimShift } from "../lib/scheduling.js";
 import { TEST_JWT_SECRET, tokenFor, bearer } from "./helpers.js";
 
 const PHASE1 = new Date("2026-07-01T12:00:00Z");
@@ -65,6 +66,39 @@ describe("shift claim", () => {
     const res = await claim(id, "c1", { version: 999 });
     expect(res.status).toBe(409);
     expect(res.body.error).toBe("version_conflict");
+  });
+
+  it("never over-fills a capacity-1 shift under concurrent claims (CAS)", async () => {
+    // Two clerks race for the last seat. The compare-and-swap must let exactly
+    // one win; the pre-fix check-then-write let both through past capacity.
+    const store = await getStore();
+    const event = await store.createEvent({
+      title: "Race",
+      kind: "canvass",
+      county: "Franklin County",
+      zip: null,
+      venueName: null,
+      startsAt: "2026-07-02T15:00:00Z",
+      endsAt: "2026-07-02T17:00:00Z",
+      phases: ["PHASE_1_REGISTER"],
+      createdBy: "seed",
+    });
+    const shift = await store.createShift({
+      eventId: event.id,
+      role: "Solo",
+      startsAt: event.startsAt,
+      endsAt: event.endsAt,
+      capacity: 1,
+    });
+
+    const results = await Promise.all([
+      claimShift(shift.id, "clerkA"),
+      claimShift(shift.id, "clerkB"),
+    ]);
+
+    expect(results.filter((r) => r.ok)).toHaveLength(1);
+    const after = await store.getShift(shift.id);
+    expect(after?.claimedBy).toHaveLength(1);
   });
 
   it("forbids the voter-facing public role from claiming a shift (403)", async () => {

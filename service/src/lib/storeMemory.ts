@@ -100,6 +100,14 @@ export function makeMemoryStore(): StorePort {
       shifts.set(shift.id, shift);
       return shift;
     },
+    async putShiftIfVersion(shift, expectedVersion) {
+      // Synchronous check+set (no await between them) is atomic on the single
+      // event loop, so two interleaved claims can't both pass.
+      const cur = shifts.get(shift.id);
+      if (!cur || cur.version !== expectedVersion) return null;
+      shifts.set(shift.id, shift);
+      return shift;
+    },
     async createShift(input: NewShift) {
       const s: Shift = { ...input, id: randomUUID(), claimedBy: [], version: 1 };
       shifts.set(s.id, s);

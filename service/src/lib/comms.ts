@@ -12,6 +12,7 @@
 // recipient address is used to send and then discarded.
 
 import { randomUUID } from "node:crypto";
+import { COMMITTEE_NAME } from "../config.js";
 import { currentPhase } from "../phase.js";
 import { audit, getStore } from "./store.js";
 import { getMailer } from "./mailer.js";
@@ -38,8 +39,13 @@ export async function createTemplate(
   clerkId: string
 ): Promise<MessageTemplate> {
   const store = await getStore();
-  // Derive the compliance flags from the body so approval is meaningful.
-  const hasDisclaimer = /paid for by/i.test(input.body);
+  // Derive the compliance flags from the body so approval is meaningful. The
+  // disclaimer must carry BOTH the "Paid for by" phrase AND the exact registered
+  // committee name — a bare "paid for by X" with the wrong/absent committee is a
+  // reportable FEC defect, so a substring match on the phrase alone isn't enough.
+  const hasDisclaimer =
+    /paid for by/i.test(input.body) &&
+    input.body.toLowerCase().includes(COMMITTEE_NAME.toLowerCase());
   const hasOptOut =
     input.channel === "social" || /\b(stop|unsubscribe|opt[- ]?out)\b/i.test(input.body);
   const t = await store.createTemplate({ ...input, hasDisclaimer, hasOptOut });
