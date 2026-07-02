@@ -58,6 +58,20 @@ export interface LocationInput {
   schoolDistrict: string;
   zip: string;
   address?: string | null;
+  /** Device coordinates from "use my current location". When present the server
+   *  reverse-geocodes them for the district check (as authoritative as an
+   *  address), so resolution can reach HIGH confidence without a typed address. */
+  coords?: { lat: number; lng: number } | null;
+}
+
+/** Result of POST /location/reverse-geocode — what a lat/lng maps to. */
+export interface ReverseGeocoded {
+  county: string | null;
+  zip: string | null;
+  schoolDistrict: string | null;
+  inDistrict: boolean | null;
+  congressionalDistrict: string | null;
+  censusBlock: string | null;
 }
 
 // Options for the extension's cascading County → School district → ZIP selectors.

@@ -20,6 +20,7 @@ import {
   inferConfidence,
   leaForCounty,
   nearbyVenues,
+  reverseGeocodeCoords,
 } from "./publicData.js";
 import { isConsistentSelection, leaIdFor } from "./locationOptions.js";
 import { primaryNames } from "../data/mo02Candidates.js";
@@ -131,8 +132,10 @@ function catalog(loc: ResolvedLocation, lea: LeaInfo): ResourceCard[] {
       title: "Find your polling place",
       body:
         loc.confidence === "HIGH"
-          ? "Your exact polling place is based on your address."
-          : "Enter your address to get your exact polling place.",
+          ? loc.coords
+            ? "Your polling place is based on your current location."
+            : "Your exact polling place is based on your address."
+          : "Enter your address or use your current location to get your exact polling place.",
       ctaLabel: "Find polling place",
       ctaUrl: SOS_POLLING,
       source: "SOS",
@@ -300,7 +303,12 @@ export async function resolveLocalContext(
   scopes: Scope[],
   now: Date = new Date()
 ): Promise<ResolveResponse> {
-  const geo = await geocodeAddress(input.address);
+  // Prefer the device coordinates ("use my current location") for the geocode
+  // step — they're as authoritative as a typed address for district membership,
+  // so they earn HIGH confidence. Fall back to geocoding the typed address.
+  const geo = input.coords
+    ? await reverseGeocodeCoords(input.coords.lat, input.coords.lng)
+    : await geocodeAddress(input.address);
   const lea = await leaForCounty(input.county);
   // Prefer the reference dataset's real leaId for a known county+district
   // selection; fall back to the derived slug for free-text / unknown input.

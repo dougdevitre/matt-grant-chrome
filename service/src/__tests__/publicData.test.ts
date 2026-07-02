@@ -11,6 +11,7 @@ import {
   nearbyVenues,
   districtProfile,
   geocodeAddress,
+  reverseGeocodeCoords,
 } from "../lib/publicData.js";
 
 function mockFetchOnce(payload: unknown, ok = true) {
@@ -164,6 +165,58 @@ describe("geocodeAddress (parser, captured Census payload)", () => {
       censusBlock: null,
       congressionalDistrict: null,
     });
+    expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe("reverseGeocodeCoords (coordinates geocoder)", () => {
+  const PAYLOAD = {
+    result: {
+      geographies: {
+        "Census Blocks": [{ GEOID: "295101234001023" }],
+        "119th Congressional Districts": [{ GEOID: "2902" }],
+        Counties: [{ NAME: "St. Louis County", GEOID: "29189" }],
+        "Unified School Districts": [{ NAME: "Rockwood R-VI School District" }],
+        "2020 Census ZIP Code Tabulation Areas": [{ GEOID: "63131" }],
+      },
+    },
+  };
+
+  it("maps a point to county / zip / district / school / block", async () => {
+    mockFetchOnce(PAYLOAD);
+    const g = await reverseGeocodeCoords(38.6, -90.4);
+    expect(g).toEqual({
+      lat: 38.6,
+      lng: -90.4,
+      censusBlock: "295101234001023",
+      congressionalDistrict: "MO-02",
+      county: "St. Louis County",
+      zip: "63131",
+      schoolDistrict: "Rockwood R-VI School District",
+    });
+  });
+
+  it("reports a district outside MO-02 (caller derives inDistrict)", async () => {
+    mockFetchOnce({
+      result: { geographies: { "119th Congressional Districts": [{ GEOID: "2901" }] } },
+    });
+    expect((await reverseGeocodeCoords(39.1, -94.5)).congressionalDistrict).toBe("MO-01");
+  });
+
+  it("degrades to nulls (echoing coords) when the upstream errors", async () => {
+    mockFetchOnce({}, false);
+    expect(await reverseGeocodeCoords(38.6, -90.4)).toMatchObject({
+      lat: 38.6,
+      lng: -90.4,
+      county: null,
+      congressionalDistrict: null,
+    });
+  });
+
+  it("rejects non-finite coordinates without calling the network", async () => {
+    const spy = vi.fn();
+    vi.stubGlobal("fetch", spy);
+    expect((await reverseGeocodeCoords(NaN, -90)).county).toBeNull();
     expect(spy).not.toHaveBeenCalled();
   });
 });

@@ -8,7 +8,19 @@ import userEvent from "@testing-library/user-event";
 import { LocationForm } from "./LocationForm.js";
 import { api } from "../lib/api.js";
 
-vi.mock("../lib/api.js", () => ({ api: { locationOptions: vi.fn() } }));
+vi.mock("../lib/api.js", () => ({
+  api: { locationOptions: vi.fn(), reverseGeocode: vi.fn() },
+}));
+
+/** Install a fake navigator.geolocation whose getCurrentPosition runs `impl`. */
+function stubGeolocation(
+  impl: (success: PositionCallback, error: PositionErrorCallback) => void
+) {
+  Object.defineProperty(navigator, "geolocation", {
+    value: { getCurrentPosition: impl },
+    configurable: true,
+  });
+}
 
 const OPTIONS = {
   counties: [
@@ -62,6 +74,7 @@ describe("LocationForm selectors", () => {
       schoolDistrict: "Washington School District",
       zip: "63090",
       address: null,
+      coords: null,
     });
   });
 
@@ -71,5 +84,56 @@ describe("LocationForm selectors", () => {
     // No combobox; the original placeholder inputs render instead.
     expect(await screen.findByPlaceholderText("e.g. St. Louis")).toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+  });
+});
+
+describe("LocationForm — use my current location", () => {
+  it("fills the selectors and auto-submits with coords on a matched location", async () => {
+    vi.mocked(api.locationOptions).mockResolvedValue(OPTIONS as never);
+    vi.mocked(api.reverseGeocode).mockResolvedValue({
+      county: "Franklin County",
+      zip: "63090",
+      schoolDistrict: "Washington School District",
+      inDistrict: true,
+      congressionalDistrict: "MO-02",
+      censusBlock: "295101234001023",
+    });
+    stubGeolocation((success) =>
+      success({ coords: { latitude: 38.55, longitude: -90.95 } } as GeolocationPosition)
+    );
+    const onResolve = vi.fn();
+    render(<LocationForm onResolve={onResolve} busy={false} />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /use my current location/i })
+    );
+
+    await vi.waitFor(() =>
+      expect(onResolve).toHaveBeenCalledWith({
+        county: "Franklin County",
+        schoolDistrict: "Washington School District",
+        zip: "63090",
+        address: null,
+        coords: { lat: 38.55, lng: -90.95 },
+      })
+    );
+  });
+
+  it("shows a fallback note and keeps manual entry when permission is denied", async () => {
+    vi.mocked(api.locationOptions).mockResolvedValue(OPTIONS as never);
+    stubGeolocation((_success, error) =>
+      error({ code: 1, message: "denied" } as GeolocationPositionError)
+    );
+    const onResolve = vi.fn();
+    render(<LocationForm onResolve={onResolve} busy={false} />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /use my current location/i })
+    );
+
+    expect(await screen.findByText(/permission was denied/i)).toBeInTheDocument();
+    expect(onResolve).not.toHaveBeenCalled();
+    // Manual selectors still usable.
+    expect(screen.getByRole("combobox", { name: /county/i })).toBeInTheDocument();
   });
 });

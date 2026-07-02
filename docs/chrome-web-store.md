@@ -70,6 +70,7 @@ Reviewers require a justification per permission. These map to the current
 | `sidePanel` | The entire UI is a Chrome side panel opened from the toolbar action. |
 | `storage` | Persist the clerk's Service URL, selected location, and the "site tips" toggle across sessions. No PII beyond the clerk's own settings. |
 | `cookies` | Required by `@clerk/chrome-extension` to read the Clerk session on the campaign's Clerk domain so the clerk stays signed in. |
+| `geolocation` | Opt-in only, behind the "Use my current location" button. The device coordinates are sent once to reverse-geocode the voter's county/ZIP/district and jump to the official polling-place lookup; they are not stored or logged, and manual entry is always available. |
 
 **Host permissions** — the first two are the backend and the auth provider; the
 rest let the panel detect when the clerk's **active tab is on one of these

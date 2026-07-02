@@ -17,6 +17,7 @@ import type {
   PhaseConfig,
   PollingPlace,
   ResolveResponse,
+  ReverseGeocoded,
   Role,
   Shift,
   Task,
@@ -97,6 +98,11 @@ export const api = {
     call<ResolveResponse>("/location/resolve", {
       method: "POST",
       body: JSON.stringify(input),
+    }),
+  reverseGeocode: (lat: number, lng: number) =>
+    call<ReverseGeocoded>("/location/reverse-geocode", {
+      method: "POST",
+      body: JSON.stringify({ lat, lng }),
     }),
 
   // Tasks
