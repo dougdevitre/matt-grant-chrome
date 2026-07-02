@@ -26,8 +26,15 @@ service refuse to boot.
 NODE_ENV=production AUTH_DRIVER=clerk STORE_DRIVER=airtable \
   ALLOWED_ORIGIN='chrome-extension://<id>' \
   JWT_SECRET='<32+ random bytes>' AIRTABLE_PAT='<pat>' \
+  CONTACT_KEY_SALT='<32+ random bytes>' \
   node scripts/preflight.mjs
 ```
+
+> Note: when `STORE_DRIVER=airtable`, the boot gate now also requires
+> `CONTACT_KEY_SALT` (keeps contact opt-out/outbox keys from being reversible to
+> PII). `deploy-status.md` already stores it in SSM. Also set `NODE_ENV=production`
+> explicitly — an unset `NODE_ENV` is now treated as production-like and the
+> service will refuse to boot on an insecure config rather than fail open.
 
 ✅ **Gate:** prints `OK — all checks passed.` (exit 0). If it lists problems,
 fix them before deploying — the live service enforces the same rules at boot.

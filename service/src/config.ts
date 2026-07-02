@@ -38,13 +38,32 @@ export const PORT = Number(process.env.PORT ?? 8787);
 export const NODE_ENV = process.env.NODE_ENV ?? "development";
 export const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? "*";
 
+// FEC-required disclaimer: the exact registered name of the authorized principal
+// campaign committee. Every outbound template's "Paid for by …" line is validated
+// to contain this, not just the bare phrase. Override with COMMITTEE_NAME if the
+// registered name differs (e.g. "Friends of Matt Grant"). VERIFY against the FEC
+// registration before launch — a wrong name here is a compliance defect.
+export const COMMITTEE_NAME = process.env.COMMITTEE_NAME ?? "Matt Grant for Congress";
+
+/**
+ * Whether to enforce the hardened production behavior (boot gate, no dev auth,
+ * HSTS, …). We fail SAFE: the relaxed local mode is *opt-in* via an explicit
+ * NODE_ENV of "development" or "test" (the vitest suite). ANY other value —
+ * "production", "staging", a typo, or an UNSET NODE_ENV on a real deploy — is
+ * treated as production-like. Previously every gate hinged on
+ * `NODE_ENV === "production"`, so forgetting to set it on App Runner silently
+ * disabled all of them and the default dev secret could mint an admin token.
+ */
+const RELAXED_ENVS = new Set(["development", "test"]);
+export const IS_PRODUCTION_LIKE = !RELAXED_ENVS.has(process.env.NODE_ENV ?? "");
+
 /**
  * Production safety gate. Returns a list of fatal misconfigurations; the server
- * refuses to boot if any are present. In non-production it returns [] (dev
+ * refuses to boot if any are present. In relaxed local mode it returns [] (dev
  * conveniences allowed) but callers may still log warnings.
  */
 export async function assertSecureStartup(): Promise<string[]> {
-  if (NODE_ENV !== "production") return [];
+  if (!IS_PRODUCTION_LIKE) return [];
   const problems: string[] = [];
 
   const jwt = await getConfig("JWT_SECRET");
@@ -86,6 +105,15 @@ export async function assertSecureStartup(): Promise<string[]> {
   if ((process.env.STORE_DRIVER ?? "memory") === "airtable") {
     if (!(await getConfig("AIRTABLE_PAT"))) {
       problems.push("STORE_DRIVER=airtable but AIRTABLE_PAT is missing");
+    }
+    // Contact opt-out/outbox keys are derived from phone/email. Without a salt
+    // they are a bare SHA-256 (tiny keyspace, offline-reversible), so a leaked
+    // Airtable table would expose real voter PII. Require the keyed-HMAC salt
+    // once contacts persist to an external store. (lib/keys.ts consumes it.)
+    if (!(await getConfig("CONTACT_KEY_SALT"))) {
+      problems.push(
+        "STORE_DRIVER=airtable but CONTACT_KEY_SALT is missing (contact keys would be offline-reversible to PII)"
+      );
     }
   }
   // Google providers need either a service account or a legacy bearer token.

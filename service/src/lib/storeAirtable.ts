@@ -13,6 +13,7 @@
 // filtering in the Airtable UI. See docs/airtable-setup.md.
 
 import { getConfig } from "../config.js";
+import { fetchWithTimeout } from "./http.js";
 import { computeAuditHash } from "./auditChain.js";
 import type {
   StorePort,
@@ -61,7 +62,7 @@ export async function makeAirtableStore(): Promise<StorePort> {
     path: string,
     body?: unknown
   ): Promise<T> {
-    const res = await fetch(`${API}/${baseId}/${path}`, {
+    const res = await fetchWithTimeout(`${API}/${baseId}/${path}`, {
       method,
       headers: {
         Authorization: `Bearer ${pat}`,

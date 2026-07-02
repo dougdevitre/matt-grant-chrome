@@ -76,7 +76,18 @@
           <li>
             <span class="k">Your sign-in session</span> — the extension uses
             <code>cookies</code> on the campaign's authentication provider (Clerk)
-            so you stay signed in.
+            so you stay signed in. This is required by the Clerk sign-in library.
+          </li>
+          <li>
+            <span class="k">The active tab's site name (hostname only)</span> — when
+            "site tips" is on, the panel checks whether the tab you're viewing is a
+            campaign-related site (for example the Missouri Secretary of State site,
+            a county election office, or a tool like Airtable) so it can show a
+            relevant tip. It reads <strong>only the hostname</strong> — never the
+            page address path, the page content, or your history — and only for the
+            specific sites the extension is granted access to (listed as
+            <code>host_permissions</code> in the extension's manifest). Turn this off
+            anytime with the "site tips" toggle in Settings.
           </li>
         </ul>
         <p>
@@ -146,7 +157,8 @@
 
       <footer>
         Internal campaign tool. Access is limited to authorized clerks.<br />
-        <a href="/">Home</a> · <a href="/guide/">User guide</a>
+        <a href="/">Home</a> · <a href="/guide/">User guide</a><br />
+        Paid for by Matt Grant for Congress.
       </footer>
     </div>
   </body>

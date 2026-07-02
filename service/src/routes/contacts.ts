@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { Response } from "express";
-import { requireScope } from "../auth.js";
+import { requireScope, requirePhaseWritable } from "../auth.js";
 import {
   commitImport,
   logDisposition,
@@ -62,7 +62,7 @@ contactsRouter.post("/import/preview", requireScope("list.import"), async (req, 
 });
 
 // POST /contacts/import/commit  { csv }
-contactsRouter.post("/import/commit", requireScope("list.import"), async (req, res) => {
+contactsRouter.post("/import/commit", requireScope("list.import"), requirePhaseWritable, async (req, res) => {
   const err = csvError(req.body?.csv);
   if (err) {
     res.status(err.status).json({ error: err.error });
@@ -98,7 +98,7 @@ contactsRouter.get("/:id", requireScope("voter.read"), async (req, res) => {
 });
 
 // POST /contacts/:id/logs  { channel, disposition, note? }
-contactsRouter.post("/:id/logs", requireScope("contact.log"), async (req, res) => {
+contactsRouter.post("/:id/logs", requireScope("contact.log"), requirePhaseWritable, async (req, res) => {
   const b = req.body ?? {};
   if (!DISPOSITIONS.includes(b.disposition)) {
     res.status(400).json({ error: "invalid_disposition" });
@@ -146,7 +146,7 @@ contactsRouter.post("/:id/optout", requireScope("optout.manage"), async (req, re
 });
 
 // POST /contacts/:id/consent  { channel: "sms"|"email", consented: boolean, note?, version? }
-contactsRouter.post("/:id/consent", requireScope("contact.log"), async (req, res) => {
+contactsRouter.post("/:id/consent", requireScope("contact.log"), requirePhaseWritable, async (req, res) => {
   const b = req.body ?? {};
   if (b.channel !== "sms" && b.channel !== "email") {
     res.status(400).json({ error: "invalid_channel" });
@@ -169,7 +169,7 @@ contactsRouter.post("/:id/consent", requireScope("contact.log"), async (req, res
 });
 
 // POST /contacts/:id/vote-plan  { method?, date?, time?, needsRide?, note?, version? }
-contactsRouter.post("/:id/vote-plan", requireScope("contact.log"), async (req, res) => {
+contactsRouter.post("/:id/vote-plan", requireScope("contact.log"), requirePhaseWritable, async (req, res) => {
   const b = req.body ?? {};
   if (b.method != null && !VOTE_METHODS.includes(b.method)) {
     res.status(400).json({ error: "invalid_method" });
@@ -216,7 +216,7 @@ contactsRouter.get("/:id/polling-place", requireScope("voter.read"), async (req,
 
 // POST /contacts/:id/followups  { templateId?, dueAt, note? } — schedule a GOTV
 // follow-up reminder (surfaced to a clerk when due; not auto-sent).
-contactsRouter.post("/:id/followups", requireScope("contact.log"), async (req, res) => {
+contactsRouter.post("/:id/followups", requireScope("contact.log"), requirePhaseWritable, async (req, res) => {
   const b = req.body ?? {};
   const dueAt = typeof b.dueAt === "string" ? b.dueAt : null;
   if (!dueAt || Number.isNaN(Date.parse(dueAt))) {

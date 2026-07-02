@@ -36,7 +36,7 @@ export const COMPANION_SITES: CompanionSite[] = [
     hostSuffixes: ["sos.mo.gov", "voteroutreach.sos.mo.gov"],
     anyScopes: ["voter.read"],
     title: "You're on the Missouri voter site",
-    body: "Register by Jul 8 for the Aug 4 primary. After you help someone, log the outcome in your Tasks / Contacts tab.",
+    body: "Missouri's registration deadline for the Aug 4 primary is Jul 8 (no same-day registration). After you help someone, log the outcome in your Tasks / Contacts tab.",
     actions: [
       { label: "Register", url: SOS_REGISTER },
       { label: "Check status", url: SOS_STATUS },

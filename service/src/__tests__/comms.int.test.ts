@@ -17,7 +17,7 @@ const PHASE1 = new Date("2026-07-01T18:00:00Z");
 // Approved register-category SMS template: carries the "Paid for by" disclaimer
 // and STOP opt-out language so approval succeeds.
 const SMS_BODY =
-  "Register to vote today at sos.mo.gov. Paid for by Friends of Matt Grant. Reply STOP to opt out.";
+  "Register to vote today at sos.mo.gov. Paid for by Matt Grant for Congress. Reply STOP to opt out.";
 
 let templateId: string;
 let averyId: string; // seeded contact with consentSms = true and a phone
@@ -172,7 +172,7 @@ describe("GOTV batch send-to-unvoted", () => {
   // Email register-category template (approved) — avoids the SMS step-up path so
   // the batch can exercise the contact-selection + per-send loop directly.
   const EMAIL_BODY =
-    "Make your plan to vote. Paid for by Friends of Matt Grant. Reply STOP or unsubscribe to opt out.";
+    "Make your plan to vote. Paid for by Matt Grant for Congress. Reply STOP or unsubscribe to opt out.";
   async function approvedEmailTemplate() {
     const admin = bearer(tokenFor("admin"));
     const c = await request(app)

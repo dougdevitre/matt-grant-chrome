@@ -13,6 +13,8 @@ const INPUT = {
   address: "1 Government Center, Florissant, MO 63031",
 };
 const SCOPES: Scope[] = ["voter.read"];
+// Enrichment is scope-gated: demographics ↔ finance.read, venues ↔ events.write.
+const ENRICH_SCOPES: Scope[] = ["voter.read", "finance.read", "events.write"];
 const NOW = new Date("2026-07-01T12:00:00Z");
 
 // Route the mocked fetch by URL: geocoder, ACS, Overpass.
@@ -72,9 +74,9 @@ describe("resolveLocalContext enrichment", () => {
     expect(res.location.confidence).toBe("HIGH");
   });
 
-  it("attaches demographics + venues when ENRICH_RESOLVE=true", async () => {
+  it("attaches demographics + venues when ENRICH_RESOLVE=true and the scopes allow it", async () => {
     process.env.ENRICH_RESOLVE = "true";
-    const res = await resolveLocalContext(INPUT, SCOPES, NOW);
+    const res = await resolveLocalContext(INPUT, ENRICH_SCOPES, NOW);
     expect(res.enrichment?.demographics).toEqual({
       population: 51234,
       medianHouseholdIncome: 72000,
@@ -82,5 +84,14 @@ describe("resolveLocalContext enrichment", () => {
     expect(res.enrichment?.venues).toEqual([
       { name: "Florissant Library", lat: 38.79, lng: -90.32, kind: "library" },
     ]);
+  });
+
+  it("withholds scope-gated enrichment from a voter.read-only caller", async () => {
+    // Regression: the card filter hides the demographics card, but the raw
+    // numbers must not leak in the sibling `enrichment` field either.
+    process.env.ENRICH_RESOLVE = "true";
+    const res = await resolveLocalContext(INPUT, SCOPES, NOW);
+    expect(res.enrichment?.demographics).toBeNull();
+    expect(res.enrichment?.venues).toEqual([]);
   });
 });

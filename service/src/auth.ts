@@ -5,6 +5,7 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { getConfig } from "./config.js";
+import { currentPhase } from "./phase.js";
 import { hasScope, scopesForRole } from "./rbac.js";
 import type { ClerkIdentity, Role, Scope } from "./lib/types.js";
 
@@ -76,4 +77,23 @@ export function requireAnyScope(allowed: Scope[]) {
     }
     next();
   };
+}
+
+/**
+ * Freeze mutating campaign activity once the election closes. The phase table
+ * promises PHASE_CLOSED is read-only, but previously only task-claim and comms
+ * re-checked phase — event/contact/import writes did not, so a stale client
+ * could keep creating events and logging outreach after Aug 4. This is the
+ * server-authoritative guard; the UI gate is cosmetic. Returns 409 so a client
+ * still showing a write button gets a clear refusal.
+ *
+ * NOTE: opt-out / suppression writes are deliberately NOT gated with this —
+ * honoring a "stop contacting me" must always work, including after close.
+ */
+export function requirePhaseWritable(req: Request, res: Response, next: NextFunction): void {
+  if (currentPhase() === "PHASE_CLOSED") {
+    res.status(409).json({ error: "phase_closed" });
+    return;
+  }
+  next();
 }
