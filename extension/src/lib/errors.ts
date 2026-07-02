@@ -20,8 +20,31 @@ export function messageForError(code: string): string {
     case "sms_cap_reached":
       return "The daily text cap has been reached.";
     case "not_signed_in":
-      return "Please sign in again.";
+    case "missing_token":
+    case "invalid_token":
+      return "Your session expired — please sign in again.";
+    case "forbidden":
+      return "That action isn't available for your role.";
+    // Generic operation failures surfaced by the panels — keep them human.
+    case "load_failed":
+      return "Couldn't load this. Check your connection and try again.";
+    case "resolve_failed":
+      return "Couldn't look that up. Check your entries and try again.";
+    case "sign_in_failed":
+      return "Sign-in didn't go through. Please try again.";
+    case "draft_failed":
+    case "action_failed":
+    case "batch_failed":
+    case "preview_failed":
+    case "commit_failed":
+    case "save_failed":
+    case "polling_failed":
+    case "schedule_failed":
+      return "That didn't go through. Please try again.";
     default:
-      return code;
+      // Never surface a raw snake_case code to a clerk.
+      return /^[a-z0-9]+(_[a-z0-9]+)+$/.test(code)
+        ? "Something went wrong. Please try again."
+        : code;
   }
 }

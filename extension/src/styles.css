@@ -311,3 +311,22 @@ body {
   border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px;
 }
 .companion-action:hover { border-color: var(--ink); }
+
+/* Header help link + onboarding/role notes */
+.hdr-right { display: flex; align-items: center; gap: 8px; }
+.hdr-help { font-size: 11px; font-weight: 600; color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--line); }
+.hdr-help:hover { color: var(--ink); border-color: var(--ink); }
+.onboard {
+  position: relative; margin: 10px 0 2px; padding: 10px 12px; border: 1px solid var(--line);
+  border-left: 3px solid var(--accent); border-radius: 8px; background: var(--surface-sunk);
+}
+.onboard strong { font-size: 13px; }
+.onboard .note { margin: 3px 0 0; }
+.onboard-x {
+  position: absolute; top: 6px; right: 8px; background: none; border: 0; cursor: pointer;
+  font-size: 16px; line-height: 1; color: var(--muted);
+}
+.role-note {
+  margin: 8px 0 2px; padding: 9px 11px; border: 1px solid #f1ddb4; border-radius: 8px;
+  background: #fff3df; color: #6b4e00; font-size: 12px;
+}

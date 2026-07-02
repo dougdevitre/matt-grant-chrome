@@ -141,7 +141,7 @@ export function CommsPanel({ me }: { me: ClerkIdentity }) {
 
   return (
     <div className="panel">
-      {error ? <div className="warn">{error}</div> : null}
+      {error ? <div className="warn" role="alert">{messageForError(error)}</div> : null}
 
       {/* Compliance review */}
       {has("comms.approve") ? (

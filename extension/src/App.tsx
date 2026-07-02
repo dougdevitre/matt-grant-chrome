@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import "./styles.css";
-import { api, signOut } from "./lib/api.js";
+import { api, signOut, DEFAULT_BASE } from "./lib/api.js";
 import { clerkSignOut } from "./lib/clerkSession.js";
+import { messageForError } from "./lib/errors.js";
 import { ROLE_LABELS } from "./lib/rbac.js";
 import type {
   ClerkIdentity,
@@ -40,6 +41,25 @@ export default function App() {
   // Context-aware "Working here" card; dismissable for the session.
   const [companionHidden, setCompanionHidden] = useState(false);
   const activeHost = useActiveHost(!!me && !companionHidden);
+  // First-run welcome — default hidden until we've read storage (avoids a flash).
+  const [onboardSeen, setOnboardSeen] = useState(true);
+
+  useEffect(() => {
+    if (typeof chrome === "undefined" || !chrome.storage?.local) {
+      setOnboardSeen(false);
+      return;
+    }
+    chrome.storage.local
+      .get("onboardingSeen")
+      .then(({ onboardingSeen }) => setOnboardSeen(!!onboardingSeen));
+  }, []);
+
+  function dismissOnboard() {
+    setOnboardSeen(true);
+    if (typeof chrome !== "undefined" && chrome.storage?.local) {
+      chrome.storage.local.set({ onboardingSeen: true });
+    }
+  }
 
   const load = useCallback(async (as?: Role | null) => {
     setError(null);
@@ -127,12 +147,44 @@ export default function App() {
     <div className="app">
       <header className="hdr">
         <h1><img className="hdr-logo" src="icons/icon48.png" alt="" /> Matt Grant — Campaign Tools</h1>
-        {me ? (
-          <button className="role-chip linklike" onClick={handleSignOut} title="Sign out">
-            {ROLE_LABELS[realRole ?? me.role]} ·&nbsp;exit
-          </button>
-        ) : null}
+        <div className="hdr-right">
+          <a
+            className="hdr-help"
+            href={`${DEFAULT_BASE}/guide/`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Open the user guide"
+          >
+            Help
+          </a>
+          {me ? (
+            <button className="role-chip linklike" onClick={handleSignOut} title="Sign out">
+              {ROLE_LABELS[realRole ?? me.role]} ·&nbsp;exit
+            </button>
+          ) : null}
+        </div>
       </header>
+
+      {me && !onboardSeen ? (
+        <div className="onboard" role="note">
+          <button className="onboard-x" onClick={dismissOnboard} aria-label="Dismiss welcome">
+            ×
+          </button>
+          <strong>Welcome to Campaign Tools 👋</strong>
+          <p className="note">
+            Start on <b>Local</b> — pick your county for voting info. Then work your{" "}
+            <b>Tasks</b> and check <b>Turnout</b>. Stuck? The <b>Help</b> link up top opens the
+            guide.
+          </p>
+        </div>
+      ) : null}
+
+      {realRole === "public" ? (
+        <div className="role-note" role="note">
+          You're signed in as <strong>Voter</strong> — you can see local voting info. To unlock clerk
+          tools (Tasks, Turnout, Comms…), ask your campaign admin to assign your role.
+        </div>
+      ) : null}
 
       {realRole === "admin" ? (
         <label className="viewas">
@@ -186,7 +238,7 @@ export default function App() {
       {activeTab === "local" ? (
         <>
           <LocationForm initial={data?.location} onResolve={resolve} busy={busy} />
-          {error ? <div className="warn">Something went wrong: {error}</div> : null}
+          {error ? <div className="warn" role="alert">{messageForError(error)}</div> : null}
           {data ? <ResourceCards data={data} /> : null}
         </>
       ) : null}

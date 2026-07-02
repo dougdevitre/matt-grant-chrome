@@ -67,9 +67,12 @@ describe("TaskQueue", () => {
     expect(await screen.findByText(/queue is clear/i)).toBeInTheDocument();
   });
 
-  it("surfaces a load error", async () => {
-    vi.mocked(api.tasks).mockRejectedValue(new Error("boom"));
+  it("surfaces a load error as a friendly, announced message", async () => {
+    vi.mocked(api.tasks).mockRejectedValue(new Error("load_failed"));
     render(<TaskQueue me={me} zip={null} />);
-    expect(await screen.findByText(/Couldn't load tasks: boom/)).toBeInTheDocument();
+    const alert = await screen.findByRole("alert");
+    // Raw code is mapped to human copy, not shown verbatim.
+    expect(alert).toHaveTextContent(/couldn't load this/i);
+    expect(alert).not.toHaveTextContent("load_failed");
   });
 });
