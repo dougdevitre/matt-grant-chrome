@@ -172,6 +172,13 @@ the live Clerk/Airtable/Google/Twilio accounts and flip their drivers on; allow-
 origin in Clerk and set each clerk's `publicMetadata.role`; and a live run of the public-data
 clients against real endpoints (egress is allowlist-restricted in the build sandbox).
 
+**Go-live runbook:** `docs/go-live-checklist.md` is the ordered sequence with verification gates.
+Two helpers back it: `node scripts/preflight.mjs` validates the deploy config against the
+refuse-to-boot gate and probes `/health` + `/ready` (`--url https://…`), and
+`node scripts/smoke-public-data.mjs` verifies the live Census/FEC/OSM/DESE clients from a host with
+open egress. To publish the extension, `docs/chrome-web-store.md` has the listing copy, permission
+justifications, and submission checklist.
+
 ## Tests & CI
 
 Automated coverage runs under **Vitest** as two projects — `service` (Node) and
