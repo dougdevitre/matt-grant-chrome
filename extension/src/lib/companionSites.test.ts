@@ -29,4 +29,25 @@ describe("matchCompanion", () => {
   it("returns null when the role lacks the required scope", () => {
     expect(matchCompanion("www.sos.mo.gov", S())).toBeNull();
   });
+
+  it("matches the four county election-office domains (voter.read)", () => {
+    for (const h of [
+      "stlouiscountymo.gov",
+      "www.sccmo.org",
+      "www.franklinmo.org",
+      "warrencountymoclerk.com",
+    ]) {
+      expect(matchCompanion(h, S("voter.read"))?.id).toBe("county-office");
+    }
+  });
+
+  it("role-gates the workflow companions", () => {
+    expect(matchCompanion("mail.google.com", S("contact.log"))?.id).toBe("gmail");
+    expect(matchCompanion("calendar.google.com", S("events.write"))?.id).toBe("calendar");
+    expect(matchCompanion("winred.com", S("finance.read"))?.id).toBe("winred");
+    expect(matchCompanion("www.facebook.com", S("comms.draft"))?.id).toBe("social");
+    // Wrong scope → no card.
+    expect(matchCompanion("winred.com", S("voter.read"))).toBeNull();
+    expect(matchCompanion("www.facebook.com", S("voter.read"))).toBeNull();
+  });
 });
