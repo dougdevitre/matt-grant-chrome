@@ -204,6 +204,15 @@ export async function makeAirtableStore(): Promise<StorePort> {
     async putShift(shift) {
       return upsert("Shifts", shift, { EventId: shift.eventId });
     },
+    async putShiftIfVersion(shift, expectedVersion) {
+      // Airtable has no transactional compare-and-swap, so re-read the record
+      // immediately before writing and bail if the version already moved. This
+      // narrows the race window to the get→put gap rather than the whole
+      // claim; it is not a hard guarantee under true simultaneity.
+      const cur = await findOneByFormula<Shift>("Shifts", "RecordId", shift.id);
+      if (!cur || cur.version !== expectedVersion) return null;
+      return upsert("Shifts", shift, { EventId: shift.eventId });
+    },
     async createShift(input: NewShift) {
       const s: Shift = { ...input, id: randomUUID(), claimedBy: [], version: 1 };
       return upsert("Shifts", s, { EventId: s.eventId });

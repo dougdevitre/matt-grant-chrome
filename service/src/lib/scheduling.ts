@@ -95,7 +95,11 @@ export async function claimShift(
     claimedBy: [...shift.claimedBy, clerkId],
     version: shift.version + 1,
   };
-  await store.putShift(updated);
+  // Compare-and-swap on the version we read: if another claim landed in the
+  // get→put window, the write is rejected and we report the conflict rather than
+  // silently over-filling the shift past capacity.
+  const written = await store.putShiftIfVersion(updated, shift.version);
+  if (!written) return { ok: false, code: "version_conflict" };
   await audit(store, clerkId, "shift.claim", "shift", shiftId);
 
   // Phase 2: send the volunteer a calendar invite (non-blocking).
