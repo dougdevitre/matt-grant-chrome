@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { Response } from "express";
 import { requireScope, requirePhaseWritable } from "../auth.js";
 import {
+  addOneContact,
   commitImport,
   logDisposition,
   optOutContact,
@@ -69,6 +70,34 @@ contactsRouter.post("/import/commit", requireScope("list.import"), requirePhaseW
     return;
   }
   res.status(201).json(await commitImport(req.body.csv, req.clerk!.clerkId));
+});
+
+// POST /contacts  { firstName, lastName, phone?, email?, address?, city?, zip? }
+// Add a single contact (a clerk on a call) through the same normalize → dedupe →
+// suppress-opt-outs → geocode path as an import.
+contactsRouter.post("/", requireScope("list.import"), requirePhaseWritable, async (req, res) => {
+  const b = req.body ?? {};
+  const result = await addOneContact(
+    {
+      firstName: typeof b.firstName === "string" ? b.firstName : "",
+      lastName: typeof b.lastName === "string" ? b.lastName : "",
+      phone: typeof b.phone === "string" ? b.phone : undefined,
+      email: typeof b.email === "string" ? b.email : undefined,
+      addressLine1: typeof b.address === "string" ? b.address : undefined,
+      city: typeof b.city === "string" ? b.city : undefined,
+      zip: typeof b.zip === "string" ? b.zip : undefined,
+    },
+    req.clerk!.clerkId
+  );
+  if (result.ok) {
+    res.status(201).json(result.contact);
+    return;
+  }
+  // invalid → 400 (fixable input); duplicate / suppressed → 409 (already known).
+  res.status(result.code === "invalid" ? 400 : 409).json({
+    error: result.code,
+    reason: result.reason,
+  });
 });
 
 // GET /contacts?zip=&regStatus=&voteStatus=&notVoted=&limit=&offset=

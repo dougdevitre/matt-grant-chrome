@@ -28,7 +28,8 @@
   "permissions": [
     "sidePanel",
     "storage",
-    "cookies"
+    "cookies",
+    "geolocation"
   ],
   "host_permissions": [
     "http://localhost:8787/*",

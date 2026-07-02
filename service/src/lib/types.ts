@@ -58,6 +58,20 @@ export interface LocationInput {
   schoolDistrict: string;
   zip: string;
   address?: string | null;
+  /** Device coordinates from "use my current location". When present the server
+   *  reverse-geocodes them for the district check (as authoritative as an
+   *  address), so resolution can reach HIGH confidence without a typed address. */
+  coords?: { lat: number; lng: number } | null;
+}
+
+/** Result of POST /location/reverse-geocode — what a lat/lng maps to. */
+export interface ReverseGeocoded {
+  county: string | null;
+  zip: string | null;
+  schoolDistrict: string | null;
+  inDistrict: boolean | null;
+  congressionalDistrict: string | null;
+  censusBlock: string | null;
 }
 
 // Options for the extension's cascading County → School district → ZIP selectors.
@@ -346,7 +360,13 @@ export interface FollowUp {
 }
 
 // Import staging
-export type ImportRowStatus = "new" | "duplicate" | "invalid" | "out_of_district";
+// "suppressed" = the contact previously opted out; never silently re-added.
+export type ImportRowStatus =
+  | "new"
+  | "duplicate"
+  | "invalid"
+  | "out_of_district"
+  | "suppressed";
 
 export interface ImportRow {
   firstName: string;
@@ -359,6 +379,9 @@ export interface ImportRow {
   status: ImportRowStatus;
   reason: string | null;
   contactKey: string | null;
+  // Geocode result computed once at preview time so commit never re-geocodes.
+  inDistrict: boolean | null;
+  censusBlock: string | null;
 }
 
 export interface ImportPreview {
@@ -371,4 +394,7 @@ export interface ImportResult {
   created: number;
   skipped: number;
   contactIds: string[];
+  // Fixable rows that did not import (1-based CSV row number + why), so staff
+  // can correct and re-import instead of losing them silently.
+  errors: { row: number; reason: string }[];
 }

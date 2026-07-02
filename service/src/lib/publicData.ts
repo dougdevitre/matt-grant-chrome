@@ -121,6 +121,87 @@ export async function geocodeAddress(
   }
 }
 
+const REVERSE_GEOCODER_BASE =
+  "https://geocoding.geo.census.gov/geocoder/geographies/coordinates";
+
+export interface ReverseGeocodeResult {
+  lat: number;
+  lng: number;
+  censusBlock: string | null; // 15-digit GEOID
+  congressionalDistrict: string | null; // e.g. "MO-02"
+  county: string | null; // e.g. "St. Louis County"
+  zip: string | null; // ZCTA GEOID (5-digit)
+  schoolDistrict: string | null; // unified school district name (best-effort)
+}
+
+/**
+ * Reverse-geocode a lat/lng via the Census `coordinates` geocoder → the county,
+ * ZCTA (zip), congressional district, and best-effort unified school district
+ * for that point. Mirrors geocodeAddress: server-side only, timed out, degrades
+ * to nulls (echoing back the coords) on any failure. Coordinates are as
+ * authoritative as a typed address for district membership, so a resolved
+ * district lets the caller reach HIGH confidence.
+ */
+export async function reverseGeocodeCoords(
+  lat: number,
+  lng: number
+): Promise<ReverseGeocodeResult> {
+  const empty: ReverseGeocodeResult = {
+    lat,
+    lng,
+    censusBlock: null,
+    congressionalDistrict: null,
+    county: null,
+    zip: null,
+    schoolDistrict: null,
+  };
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return empty;
+
+  // Census coordinates geocoder takes x=longitude, y=latitude.
+  const url =
+    `${REVERSE_GEOCODER_BASE}?x=${encodeURIComponent(String(lng))}` +
+    `&y=${encodeURIComponent(String(lat))}` +
+    `&benchmark=Public_AR_Current&vintage=Current_Current&layers=all&format=json`;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), GEOCODE_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) return empty;
+    // The coordinates endpoint returns geographies directly (no addressMatches).
+    const json = (await res.json()) as {
+      result?: { geographies?: Record<string, CensusGeographyEntry[]> };
+    };
+    const g = json.result?.geographies;
+    if (!g) return empty;
+
+    const str = (v: unknown): string | null =>
+      typeof v === "string" && v ? v : null;
+    const block = pickGeography(g, /Census Blocks/i);
+    const cd = pickGeography(g, /Congressional Districts/i);
+    const county = pickGeography(g, /Counties/i);
+    const zcta = pickGeography(g, /ZCTA|Zip Code Tabulation Areas/i);
+    const school = pickGeography(g, /Unified School Districts/i);
+
+    return {
+      lat,
+      lng,
+      censusBlock: str(block?.GEOID),
+      congressionalDistrict: cdFromGeoid(
+        typeof cd?.GEOID === "string" ? cd.GEOID : undefined
+      ),
+      county: str(county?.NAME),
+      zip: str(zcta?.GEOID),
+      schoolDistrict: str(school?.NAME),
+    };
+  } catch {
+    // Timeout, network error, or unexpected shape — degrade gracefully.
+    return empty;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** Resolve a Missouri county to its Local Election Authority (Phase 4). */
 export async function leaForCounty(county: string): Promise<{
   leaId: string | null;

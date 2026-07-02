@@ -276,3 +276,91 @@ describe("GOTV follow-up reminders", () => {
     expect(missing.status).toBe(404);
   });
 });
+
+describe("contact import", () => {
+  // Address-free rows keep the geocoder out of the hermetic test path.
+  const CSV =
+    "firstName,lastName,email,phone\n" +
+    "Sam,Rivera,sam@example.com,\n" + // new
+    "NoName,,,3145550000\n" + // invalid — missing last name
+    "Sam,Rivera,sam@example.com,\n"; // duplicate of row 1 within the batch
+
+  it("previews new / invalid / duplicate buckets", async () => {
+    const res = await request(app)
+      .post("/contacts/import/preview")
+      .set("Authorization", admin())
+      .send({ csv: CSV });
+    expect(res.status).toBe(200);
+    expect(res.body.counts.new).toBe(1);
+    expect(res.body.counts.invalid).toBe(1);
+    expect(res.body.counts.duplicate).toBe(1);
+  });
+
+  it("commits new rows, reports the fixable row, and is idempotent on re-run", async () => {
+    const first = await request(app)
+      .post("/contacts/import/commit")
+      .set("Authorization", admin())
+      .send({ csv: CSV });
+    expect(first.status).toBe(201);
+    expect(first.body.created).toBe(1);
+    expect(first.body.errors).toEqual([{ row: 3, reason: "missing name" }]);
+    // Re-running creates nothing new (dedup by key).
+    const second = await request(app)
+      .post("/contacts/import/commit")
+      .set("Authorization", admin())
+      .send({ csv: CSV });
+    expect(second.body.created).toBe(0);
+  });
+
+  it("accepts tab-delimited (spreadsheet) paste", async () => {
+    const tsv = "firstName\tlastName\temail\nDana\tKerr\tdana@example.com";
+    const res = await request(app)
+      .post("/contacts/import/commit")
+      .set("Authorization", admin())
+      .send({ csv: tsv });
+    expect(res.status).toBe(201);
+    expect(res.body.created).toBe(1);
+  });
+
+  it("suppresses a previously opted-out contact on re-import", async () => {
+    const csv = "firstName,lastName,email\nPat,Lee,pat@example.com";
+    const created = await request(app)
+      .post("/contacts/import/commit")
+      .set("Authorization", admin())
+      .send({ csv });
+    const id = created.body.contactIds[0];
+    await request(app).post(`/contacts/${id}/optout`).set("Authorization", admin()).send({});
+    const preview = await request(app)
+      .post("/contacts/import/preview")
+      .set("Authorization", admin())
+      .send({ csv });
+    expect(preview.body.counts.suppressed).toBe(1);
+    expect(preview.body.counts.new).toBe(0);
+  });
+});
+
+describe("single contact add (POST /contacts)", () => {
+  it("adds one contact (201)", async () => {
+    const res = await request(app)
+      .post("/contacts")
+      .set("Authorization", admin())
+      .send({ firstName: "Robin", lastName: "Diaz", phone: "3145551234" });
+    expect(res.status).toBe(201);
+    expect(res.body.firstName).toBe("Robin");
+  });
+
+  it("rejects a missing name (400) and a duplicate (409)", async () => {
+    const bad = await request(app)
+      .post("/contacts")
+      .set("Authorization", admin())
+      .send({ firstName: "Only" });
+    expect(bad.status).toBe(400);
+
+    const body = { firstName: "Dup", lastName: "Person", email: "dup@example.com" };
+    const one = await request(app).post("/contacts").set("Authorization", admin()).send(body);
+    expect(one.status).toBe(201);
+    const two = await request(app).post("/contacts").set("Authorization", admin()).send(body);
+    expect(two.status).toBe(409);
+    expect(two.body.error).toBe("duplicate");
+  });
+});

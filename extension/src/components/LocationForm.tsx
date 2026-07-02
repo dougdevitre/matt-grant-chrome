@@ -25,6 +25,13 @@ export function LocationForm({
   const [zip, setZip] = useState(initial?.zip ?? "");
   const [address, setAddress] = useState(initial?.address ?? "");
 
+  // Device coordinates from "use my current location". Present only while the
+  // filled county/ZIP still come from that detected point; any manual edit to
+  // county or ZIP clears it so we never send stale coordinates.
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [geoBusy, setGeoBusy] = useState(false);
+  const [geoNote, setGeoNote] = useState<string | null>(null);
+
   const [options, setOptions] = useState<LocationOptions | null>(null);
   const [optionsFailed, setOptionsFailed] = useState(false);
 
@@ -49,11 +56,77 @@ export function LocationForm({
     [options, county]
   );
 
-  // Changing county invalidates the previously-picked district + ZIP.
+  // Changing county invalidates the previously-picked district + ZIP, and means
+  // the user is overriding any detected location.
   function onCountyChange(next: string) {
     setCounty(next);
     setSchoolDistrict("");
     setZip("");
+    setCoords(null);
+  }
+
+  // A manual ZIP edit also overrides the detected location (district is a
+  // sub-selection of the same point, so it does not clear coords).
+  function onZipChange(next: string) {
+    setZip(next);
+    setCoords(null);
+  }
+
+  // "Use my current location": get the device coordinates, reverse-geocode them
+  // to county/ZIP/(district), and pre-fill the selectors. Auto-submits only when
+  // it yields a complete, consistent selection; otherwise it fills what it can
+  // and asks the user to finish. Any failure/denial falls back to manual entry.
+  function detectMyLocation() {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setGeoNote("Location isn't available on this device — enter it below.");
+      return;
+    }
+    setGeoBusy(true);
+    setGeoNote(null);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        try {
+          const g = await api.reverseGeocode(lat, lng);
+          const nextCounty = g.county ?? "";
+          const matchedCounty = options?.counties.find((c) => c.county === nextCounty);
+          const matchedDistrict =
+            (g.schoolDistrict &&
+              matchedCounty?.schoolDistricts.find((d) => d.name === g.schoolDistrict)
+                ?.name) ||
+            "";
+          const nextZip = g.zip ?? "";
+          if (nextCounty) setCounty(nextCounty);
+          setSchoolDistrict(matchedDistrict);
+          if (nextZip) setZip(nextZip);
+          setCoords({ lat, lng });
+          if (g.inDistrict === false) {
+            setGeoNote("Your location looks outside MO-02 — double-check, or continue anyway.");
+          } else if (!matchedDistrict) {
+            setGeoNote("Filled in your area — pick your school district, then tap Show my info.");
+          }
+          if (nextCounty && matchedDistrict && /^\d{5}$/.test(nextZip)) {
+            onResolve({
+              county: nextCounty,
+              schoolDistrict: matchedDistrict,
+              zip: nextZip,
+              address: address?.trim() || null,
+              coords: { lat, lng },
+            });
+          }
+        } catch {
+          setGeoNote("Couldn't look up your location — enter it below.");
+        } finally {
+          setGeoBusy(false);
+        }
+      },
+      () => {
+        setGeoBusy(false);
+        setGeoNote("Location permission was denied — enter it below.");
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+    );
   }
 
   const zipValid = /^\d{5}$/.test(zip);
@@ -61,6 +134,15 @@ export function LocationForm({
 
   return (
     <div className="form">
+      <button
+        className="btn secondary geo-btn"
+        disabled={busy || geoBusy}
+        onClick={detectMyLocation}
+      >
+        {geoBusy ? "Locating…" : "📍 Use my current location"}
+      </button>
+      {geoNote ? <div className="note">{geoNote}</div> : null}
+
       <label>
         County
         {useSelectors ? (
@@ -119,7 +201,7 @@ export function LocationForm({
             <select
               className="select"
               value={zip}
-              onChange={(e) => setZip(e.target.value)}
+              onChange={(e) => onZipChange(e.target.value)}
               disabled={!selectedCounty}
             >
               <option value="">{selectedCounty ? "Select…" : "—"}</option>
@@ -132,7 +214,7 @@ export function LocationForm({
           ) : (
             <input
               value={zip}
-              onChange={(e) => setZip(e.target.value.replace(/\D/g, "").slice(0, 5))}
+              onChange={(e) => onZipChange(e.target.value.replace(/\D/g, "").slice(0, 5))}
               inputMode="numeric"
               placeholder="63031"
             />
@@ -157,6 +239,7 @@ export function LocationForm({
             schoolDistrict: schoolDistrict.trim(),
             zip,
             address: address?.trim() || null,
+            coords,
           })
         }
       >

@@ -17,6 +17,7 @@ import type {
   PhaseConfig,
   PollingPlace,
   ResolveResponse,
+  ReverseGeocoded,
   Role,
   Shift,
   Task,
@@ -97,6 +98,11 @@ export const api = {
     call<ResolveResponse>("/location/resolve", {
       method: "POST",
       body: JSON.stringify(input),
+    }),
+  reverseGeocode: (lat: number, lng: number) =>
+    call<ReverseGeocoded>("/location/reverse-geocode", {
+      method: "POST",
+      body: JSON.stringify({ lat, lng }),
     }),
 
   // Tasks
@@ -204,6 +210,19 @@ export const api = {
     call<ImportResult>("/contacts/import/commit", {
       method: "POST",
       body: JSON.stringify({ csv }),
+    }),
+  addContact: (input: {
+    firstName: string;
+    lastName: string;
+    phone?: string;
+    email?: string;
+    address?: string;
+    city?: string;
+    zip?: string;
+  }) =>
+    call<Contact>("/contacts", {
+      method: "POST",
+      body: JSON.stringify(input),
     }),
   sendToContact: (templateId: string, contactId: string, idempotencyKey: string) =>
     call<{ status: string }>("/comms/send-to-contact", {

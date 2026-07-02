@@ -2,7 +2,7 @@ import { Router } from "express";
 import { requireScope } from "../auth.js";
 import { resolveLocalContext } from "../lib/locationResolver.js";
 import { getLocationOptions } from "../lib/locationOptions.js";
-import { leaForCounty } from "../lib/publicData.js";
+import { leaForCounty, reverseGeocodeCoords } from "../lib/publicData.js";
 import type { LocationInput } from "../lib/types.js";
 
 export const locationRouter = Router();
@@ -31,11 +31,58 @@ locationRouter.post("/resolve", requireScope("voter.read"), async (req, res) => 
       schoolDistrict: body.schoolDistrict,
       zip: body.zip,
       address: body.address ?? null,
+      coords: coordsFrom(body.coords),
     },
     scopes
   );
   res.json(result);
 });
+
+// POST /location/reverse-geocode { lat, lng } — map the voter's current device
+// coordinates to county / ZIP / district so the panel can auto-fill and jump to
+// the polling-place lookup. Coordinates never persist here (stateless).
+locationRouter.post("/reverse-geocode", requireScope("voter.read"), async (req, res) => {
+  const b = (req.body ?? {}) as { lat?: unknown; lng?: unknown };
+  const lat = b.lat;
+  const lng = b.lng;
+  if (
+    typeof lat !== "number" ||
+    typeof lng !== "number" ||
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng) ||
+    lat < -90 ||
+    lat > 90 ||
+    lng < -180 ||
+    lng > 180
+  ) {
+    res.status(400).json({ error: "invalid_coordinates" });
+    return;
+  }
+  const geo = await reverseGeocodeCoords(lat, lng);
+  res.json({
+    county: geo.county,
+    zip: geo.zip,
+    schoolDistrict: geo.schoolDistrict,
+    inDistrict:
+      geo.congressionalDistrict != null ? geo.congressionalDistrict === "MO-02" : null,
+    congressionalDistrict: geo.congressionalDistrict,
+    censusBlock: geo.censusBlock,
+  });
+});
+
+/** Accept coords only when both parts are finite numbers; otherwise drop them. */
+function coordsFrom(c: LocationInput["coords"]): { lat: number; lng: number } | null {
+  if (
+    c &&
+    typeof c.lat === "number" &&
+    typeof c.lng === "number" &&
+    Number.isFinite(c.lat) &&
+    Number.isFinite(c.lng)
+  ) {
+    return { lat: c.lat, lng: c.lng };
+  }
+  return null;
+}
 
 // GET /location/lea?county= — local election authority deep-link.
 locationRouter.get("/lea", async (req, res) => {

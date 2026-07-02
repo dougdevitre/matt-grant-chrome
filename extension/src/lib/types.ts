@@ -56,6 +56,19 @@ export interface LocationInput {
   schoolDistrict: string;
   zip: string;
   address?: string | null;
+  /** Device coordinates from "use my current location". Sent to the server so it
+   *  reverse-geocodes them for the district check → HIGH confidence. */
+  coords?: { lat: number; lng: number } | null;
+}
+
+/** Result of POST /location/reverse-geocode — what a lat/lng maps to. */
+export interface ReverseGeocoded {
+  county: string | null;
+  zip: string | null;
+  schoolDistrict: string | null;
+  inDistrict: boolean | null;
+  congressionalDistrict: string | null;
+  censusBlock: string | null;
 }
 
 // Options for the cascading County → School district → ZIP selectors.
@@ -258,7 +271,12 @@ export interface GotvDashboard {
   byZip: GotvZipRow[];
 }
 
-export type ImportRowStatus = "new" | "duplicate" | "invalid" | "out_of_district";
+export type ImportRowStatus =
+  | "new"
+  | "duplicate"
+  | "invalid"
+  | "out_of_district"
+  | "suppressed";
 
 export interface ImportRow {
   firstName: string;
@@ -281,4 +299,5 @@ export interface ImportResult {
   created: number;
   skipped: number;
   contactIds: string[];
+  errors: { row: number; reason: string }[];
 }
