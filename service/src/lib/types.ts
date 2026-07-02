@@ -17,7 +17,9 @@ export type Scope =
   | "finance.read"
   | "audit.read"
   | "task.read"
-  | "task.write";
+  | "task.write"
+  | "team.read"
+  | "team.manage";
 
 export type Role =
   | "registration_clerk"
@@ -26,6 +28,7 @@ export type Role =
   | "compliance_clerk"
   | "events_clerk"
   | "social_comms_clerk"
+  | "team_captain"
   | "admin"
   | "public";
 
@@ -44,6 +47,31 @@ export interface ClerkIdentity {
   scopes: Scope[];
   // Set when an admin is previewing another role via `GET /me?as=<role>`.
   viewAs?: boolean;
+}
+
+// A volunteer on a captain's team. The app otherwise stores no clerk identity
+// (clerks are opaque JWT subjects), so this roster is the source of volunteer
+// display names and the captain→volunteer link.
+export interface TeamMember {
+  id: string;
+  clerkId: string; // the volunteer's Clerk subject (matches JWT `sub`)
+  displayName: string;
+  email: string | null;
+  phone: string | null;
+  teamId: string | null;
+  captainClerkId: string; // the captain who manages this volunteer
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// A volunteer plus the work assigned to / claimed by them — the payload behind
+// a captain's per-volunteer view.
+export interface VolunteerWork {
+  volunteer: TeamMember;
+  tasks: Task[];
+  shifts: Shift[];
+  recentActivity: AuditEvent[];
 }
 
 export interface PhaseConfig {

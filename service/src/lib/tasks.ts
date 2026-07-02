@@ -87,6 +87,40 @@ export async function claimTask(
   return { ok: true, task: updated };
 }
 
+/**
+ * Assign (or reassign) a task to `targetClerkId` on behalf of a captain. Unlike
+ * claimTask (self-service, hardcodes the actor), this sets the assignee to
+ * another volunteer and audits *who* assigned it. The route enforces that the
+ * caller manages the target; here we only guard the task's own state (must exist,
+ * not be terminal, and still be in-phase). We don't check the target's scope —
+ * the store has no record of a volunteer's role — so completeTask remains the
+ * backstop if the assignee can't actually do it.
+ */
+export async function assignTask(
+  id: string,
+  targetClerkId: string,
+  byClerkId: string,
+  now: Date = new Date()
+): Promise<TaskActionResult> {
+  const store = await getStore();
+  const task = await store.getTask(id);
+  if (!task) return { ok: false, code: "not_found" };
+  if (task.status === "done" || task.status === "skipped")
+    return { ok: false, code: "bad_status" };
+  if (!phaseAllows(task, now)) return { ok: false, code: "phase_closed" };
+
+  const updated: Task = {
+    ...task,
+    status: "claimed",
+    assignedClerkId: targetClerkId,
+    version: task.version + 1,
+    updatedAt: now.toISOString(),
+  };
+  await store.putTask(updated);
+  await audit(store, byClerkId, "task.assign", "task", id);
+  return { ok: true, task: updated };
+}
+
 export async function completeTask(
   id: string,
   clerkId: string,

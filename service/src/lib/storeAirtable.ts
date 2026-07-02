@@ -26,6 +26,8 @@ import type {
   ContactFilter,
   NewFollowUp,
   FollowUpFilter,
+  NewTeamMember,
+  TeamMemberFilter,
 } from "./store.js";
 import { randomUUID } from "node:crypto";
 import type {
@@ -38,6 +40,7 @@ import type {
   OutboxEntry,
   Shift,
   Task,
+  TeamMember,
 } from "./types.js";
 
 const API = "https://api.airtable.com/v0";
@@ -343,6 +346,21 @@ export async function makeAirtableStore(): Promise<StorePort> {
         ContactId: followUp.contactId,
         Status: followUp.status,
       });
+    },
+
+    async listTeamMembers(filter: TeamMemberFilter = {}) {
+      let all = await listAll<TeamMember>("TeamMembers");
+      if (filter.captainClerkId)
+        all = all.filter((m) => m.captainClerkId === filter.captainClerkId);
+      if (filter.active !== undefined) all = all.filter((m) => m.active === filter.active);
+      return all.sort((a, b) => a.displayName.localeCompare(b.displayName));
+    },
+    async getTeamMemberByClerkId(clerkId) {
+      return findOneByFormula<TeamMember>("TeamMembers", "ClerkId", clerkId);
+    },
+    async createTeamMember(input: NewTeamMember) {
+      const m: TeamMember = { ...input, id: randomUUID(), createdAt: now(), updatedAt: now() };
+      return upsert("TeamMembers", m, { ClerkId: m.clerkId, CaptainClerkId: m.captainClerkId });
     },
 
     async appendAudit(evt: AuditEvent) {

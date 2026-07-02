@@ -22,9 +22,10 @@ import { Scheduler } from "./components/Scheduler.js";
 import { ImportPanel } from "./components/ImportPanel.js";
 import { CommsPanel } from "./components/CommsPanel.js";
 import { TurnoutPanel } from "./components/TurnoutPanel.js";
+import { TeamPanel } from "./components/TeamPanel.js";
 import { SignIn } from "./components/SignIn.js";
 
-type Tab = "local" | "tasks" | "schedule" | "import" | "comms" | "turnout";
+type Tab = "local" | "tasks" | "schedule" | "import" | "comms" | "turnout" | "team";
 
 export default function App() {
   const [me, setMe] = useState<ClerkIdentity | null>(null);
@@ -134,11 +135,13 @@ export default function App() {
     scopes.includes("comms.approve") ||
     scopes.includes("comms.send");
   const canRead = scopes.includes("voter.read");
+  const canManageTeam = scopes.includes("team.read");
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "local", label: "Local" },
     { id: "tasks", label: "Tasks" },
     { id: "schedule", label: "Schedule" },
+    ...(canManageTeam ? [{ id: "team" as Tab, label: "Team" }] : []),
     ...(canRead ? [{ id: "turnout" as Tab, label: "Turnout" }] : []),
     ...(canImport ? [{ id: "import" as Tab, label: "Import" }] : []),
     ...(canComms ? [{ id: "comms" as Tab, label: "Comms" }] : []),
@@ -276,6 +279,7 @@ export default function App() {
         <Scheduler me={me} county={county} zip={zip} />
       ) : null}
       {activeTab === "turnout" ? <TurnoutPanel /> : null}
+      {activeTab === "team" && me ? <TeamPanel me={me} /> : null}
       {activeTab === "import" ? <ImportPanel canRead={canRead} /> : null}
       {activeTab === "comms" && me ? <CommsPanel me={me} /> : null}
     </div>

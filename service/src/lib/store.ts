@@ -14,6 +14,7 @@ import type {
   RegStatus,
   Shift,
   Task,
+  TeamMember,
   VoteStatus,
 } from "./types.js";
 
@@ -37,6 +38,15 @@ export interface ContactFilter {
   /** GOTV: keep only contacts not yet recorded as "voted" (the turnout queue). */
   notVoted?: boolean;
   assignedClerkId?: string | null;
+}
+
+export type NewTeamMember = Omit<TeamMember, "id" | "createdAt" | "updatedAt">;
+
+export interface TeamMemberFilter {
+  /** Only the volunteers this captain manages. */
+  captainClerkId?: string | null;
+  /** Only active (non-removed) members. */
+  active?: boolean;
 }
 
 export type NewFollowUp = Omit<FollowUp, "id" | "status" | "createdAt" | "updatedAt">;
@@ -95,6 +105,10 @@ export interface StorePort {
   listFollowUps(filter?: FollowUpFilter): Promise<FollowUp[]>;
   getFollowUp(id: string): Promise<FollowUp | undefined>;
   putFollowUp(followUp: FollowUp): Promise<FollowUp>;
+  // team roster
+  listTeamMembers(filter?: TeamMemberFilter): Promise<TeamMember[]>;
+  getTeamMemberByClerkId(clerkId: string): Promise<TeamMember | undefined>;
+  createTeamMember(input: NewTeamMember): Promise<TeamMember>;
   // audit
   appendAudit(evt: AuditEvent): Promise<void>;
   readAudit(): Promise<AuditEvent[]>;

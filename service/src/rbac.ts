@@ -20,6 +20,8 @@ export const ALL_SCOPES: Scope[] = [
   "audit.read",
   "task.read",
   "task.write",
+  "team.read",
+  "team.manage",
 ];
 
 // Every clerk role works tasks, so all carry task.read + task.write.
@@ -40,6 +42,9 @@ export const ROLE_SCOPES: Record<Role, Scope[]> = {
   compliance_clerk: ["comms.approve", "optout.manage", "audit.read", ...TASK],
   events_clerk: ["events.write", "voter.read", ...TASK],
   social_comms_clerk: ["comms.draft", "comms.send", "finance.read", ...TASK],
+  // Team Captain: sees their volunteers' work and assigns/reassigns it. voter.read
+  // lets the captain see the volunteer-facing context their team works.
+  team_captain: ["team.read", "team.manage", "voter.read", ...TASK],
   admin: ALL_SCOPES,
   // The public/voter-facing build sees civic info but performs no clerk actions.
   public: ["voter.read"],

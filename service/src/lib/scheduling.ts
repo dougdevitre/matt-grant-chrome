@@ -116,6 +116,49 @@ export async function claimShift(
   return { ok: true, shift: updated };
 }
 
+/**
+ * Assign a shift to `targetClerkId` on behalf of a captain — the assign-on-behalf
+ * analog of claimShift. Same capacity + compare-and-swap guarantees; audits who
+ * assigned whom, and sends the volunteer the calendar invite.
+ */
+export async function assignShiftTo(
+  shiftId: string,
+  targetClerkId: string,
+  byClerkId: string,
+  expectedVersion?: number
+): Promise<ShiftResult> {
+  const store = await getStore();
+  const shift = await store.getShift(shiftId);
+  if (!shift) return { ok: false, code: "not_found" };
+  if (expectedVersion != null && expectedVersion !== shift.version)
+    return { ok: false, code: "version_conflict" };
+  if (shift.claimedBy.includes(targetClerkId))
+    return { ok: false, code: "already_claimed" };
+  if (shift.claimedBy.length >= shift.capacity)
+    return { ok: false, code: "full" };
+
+  const updated: Shift = {
+    ...shift,
+    claimedBy: [...shift.claimedBy, targetClerkId],
+    version: shift.version + 1,
+  };
+  const written = await store.putShiftIfVersion(updated, shift.version);
+  if (!written) return { ok: false, code: "version_conflict" };
+  await audit(store, byClerkId, "shift.assign", "shift", shiftId);
+
+  void (await getCalendar())
+    .createInvite({
+      summary: `Volunteer shift: ${shift.role}`,
+      description: "You've been assigned this shift. Details in the campaign panel.",
+      startsAt: shift.startsAt,
+      endsAt: shift.endsAt,
+      attendeeKey: targetClerkId,
+    })
+    .catch(() => undefined);
+
+  return { ok: true, shift: updated };
+}
+
 export async function myShifts(clerkId: string): Promise<Shift[]> {
   const store = await getStore();
   return store.shiftsForClerk(clerkId);

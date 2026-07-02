@@ -10,6 +10,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   compliance_clerk: "Compliance Clerk",
   events_clerk: "Events & Scheduler Clerk",
   social_comms_clerk: "Social & Comms Clerk",
+  team_captain: "Team Captain",
   admin: "Campaign Admin",
   public: "Voter",
 };

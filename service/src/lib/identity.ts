@@ -25,6 +25,7 @@ const KNOWN_ROLES: Role[] = [
   "compliance_clerk",
   "events_clerk",
   "social_comms_clerk",
+  "team_captain",
   "admin",
   "public",
 ];

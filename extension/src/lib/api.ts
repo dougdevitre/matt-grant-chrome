@@ -21,6 +21,8 @@ import type {
   Role,
   Shift,
   Task,
+  TeamMember,
+  VolunteerWork,
   VoteMethod,
 } from "./types.js";
 
@@ -103,6 +105,21 @@ export const api = {
     call<ReverseGeocoded>("/location/reverse-geocode", {
       method: "POST",
       body: JSON.stringify({ lat, lng }),
+    }),
+
+  // Team (captain view)
+  team: () => call<TeamMember[]>("/team"),
+  volunteerWork: (clerkId: string) =>
+    call<VolunteerWork>(`/team/${encodeURIComponent(clerkId)}/work`),
+  assignTask: (clerkId: string, taskId: string) =>
+    call<Task>(`/team/${encodeURIComponent(clerkId)}/assign-task`, {
+      method: "POST",
+      body: JSON.stringify({ taskId }),
+    }),
+  assignShift: (clerkId: string, shiftId: string) =>
+    call<Shift>(`/team/${encodeURIComponent(clerkId)}/assign-shift`, {
+      method: "POST",
+      body: JSON.stringify({ shiftId }),
     }),
 
   // Tasks
