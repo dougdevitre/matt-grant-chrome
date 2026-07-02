@@ -53,7 +53,7 @@ async function renderAs(role: string, scopes: Scope[]) {
   vi.mocked(api.phase).mockResolvedValue(PHASE as never);
   render(<App />);
   // Wait for the async load to resolve and the panel to render.
-  await screen.findByRole("button", { name: "Local" });
+  await screen.findByRole("tab", { name: "Local" });
 }
 
 beforeEach(() => {
@@ -76,6 +76,23 @@ describe("App role explainer", () => {
   });
 });
 
+describe("App settings + a11y", () => {
+  it("opens Settings and toggles the site-tips preference", async () => {
+    await renderAs("registration_clerk", ["voter.read", "task.read", "task.write"]);
+    await userEvent.click(screen.getByRole("button", { name: /settings/i }));
+    const cb = screen.getByRole("checkbox", { name: /show site tips/i });
+    expect(cb).toBeChecked();
+    await userEvent.click(cb);
+    expect(cb).not.toBeChecked();
+  });
+
+  it("marks the active tab with aria-selected", async () => {
+    await renderAs("registration_clerk", ["voter.read", "task.read", "task.write"]);
+    expect(screen.getByRole("tab", { name: "Local" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Tasks" })).toHaveAttribute("aria-selected", "false");
+  });
+});
+
 describe("App tab gating", () => {
   it("always shows the base Local/Tasks/Schedule tabs", async () => {
     await renderAs("registration_clerk", [
@@ -86,12 +103,12 @@ describe("App tab gating", () => {
       "task.read",
       "task.write",
     ]);
-    expect(screen.getByRole("button", { name: "Local" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Tasks" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Schedule" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Local" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Tasks" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Schedule" })).toBeInTheDocument();
     // registration_clerk has neither list.import nor a comms.draft/approve/send scope.
-    expect(screen.queryByRole("button", { name: "Import" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Comms" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Import" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Comms" })).not.toBeInTheDocument();
   });
 
   it("shows Import only for a clerk with list.import", async () => {
@@ -102,8 +119,8 @@ describe("App tab gating", () => {
       "task.read",
       "task.write",
     ]);
-    expect(screen.getByRole("button", { name: "Import" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Comms" })).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Import" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Comms" })).not.toBeInTheDocument();
   });
 
   it("shows Comms only for a clerk with a comms scope", async () => {
@@ -114,8 +131,8 @@ describe("App tab gating", () => {
       "task.read",
       "task.write",
     ]);
-    expect(screen.getByRole("button", { name: "Comms" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Import" })).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Comms" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Import" })).not.toBeInTheDocument();
   });
 });
 
@@ -161,25 +178,25 @@ describe('App "View as" switcher (admin-only)', () => {
   it("previews a role: reshapes tabs, shows a banner, then restores", async () => {
     mockMeWithPreview();
     render(<App />);
-    await screen.findByRole("button", { name: "Local" });
+    await screen.findByRole("tab", { name: "Local" });
 
     // Admin sees the switcher + the full tab set.
     const select = screen.getByRole("combobox", { name: /view as/i });
-    expect(screen.getByRole("button", { name: "Import" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Comms" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Import" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Comms" })).toBeInTheDocument();
 
     // Preview as Registration Clerk → admin-only tabs disappear, banner appears.
     await userEvent.selectOptions(select, "registration_clerk");
     expect(await screen.findByText(/previewing as/i)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Import" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Comms" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Import" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Comms" })).not.toBeInTheDocument();
     // The sign-out chip still reports the real role, not the preview.
     expect(screen.getByRole("button", { name: /Campaign Admin/ })).toBeInTheDocument();
 
     // Back to my view → full tab set returns, banner gone.
     await userEvent.click(screen.getByRole("button", { name: /back to my view/i }));
-    expect(await screen.findByRole("button", { name: "Comms" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Import" })).toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: "Comms" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Import" })).toBeInTheDocument();
     expect(screen.queryByText(/previewing as/i)).not.toBeInTheDocument();
   });
 });
