@@ -355,12 +355,30 @@ export async function makeAirtableStore(): Promise<StorePort> {
       if (filter.active !== undefined) all = all.filter((m) => m.active === filter.active);
       return all.sort((a, b) => a.displayName.localeCompare(b.displayName));
     },
+    async getTeamMember(id) {
+      return findOneByFormula<TeamMember>("TeamMembers", "RecordId", id);
+    },
     async getTeamMemberByClerkId(clerkId) {
       return findOneByFormula<TeamMember>("TeamMembers", "ClerkId", clerkId);
     },
+    async getTeamMemberByEmail(email) {
+      const e = email.trim().toLowerCase();
+      return (await listAll<TeamMember>("TeamMembers")).find(
+        (m) => (m.email ?? "").toLowerCase() === e
+      );
+    },
     async createTeamMember(input: NewTeamMember) {
       const m: TeamMember = { ...input, id: randomUUID(), createdAt: now(), updatedAt: now() };
-      return upsert("TeamMembers", m, { ClerkId: m.clerkId, CaptainClerkId: m.captainClerkId });
+      return upsert("TeamMembers", m, {
+        ClerkId: m.clerkId ?? "",
+        CaptainClerkId: m.captainClerkId,
+      });
+    },
+    async putTeamMember(member) {
+      return upsert("TeamMembers", member, {
+        ClerkId: member.clerkId ?? "",
+        CaptainClerkId: member.captainClerkId,
+      });
     },
 
     async appendAudit(evt: AuditEvent) {

@@ -7,6 +7,7 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { app } from "../index.js";
 import { getStore, resetStoreForTests } from "../lib/store.js";
 import type { NewTeamMember } from "../lib/store.js";
+import { resetVerifierForTests } from "../lib/identity.js";
 import { TEST_JWT_SECRET, tokenFor, bearer } from "./helpers.js";
 
 const CAPTAIN = "cap-1";
@@ -187,5 +188,98 @@ describe("POST /team/:clerkId/assign-shift", () => {
       .send({ shiftId });
     expect(full.status).toBe(409);
     expect(full.body.error).toBe("full");
+  });
+});
+
+describe("roster management (invite / bind / remove)", () => {
+  it("invites a pending volunteer (201, clerkId null) and dedupes by email", async () => {
+    const res = await request(app)
+      .post("/team")
+      .set("Authorization", captain())
+      .send({ displayName: "New Val", email: "new@x.co" });
+    expect(res.status).toBe(201);
+    expect(res.body.clerkId).toBeNull();
+    expect(res.body.captainClerkId).toBe(CAPTAIN);
+
+    const dup = await request(app)
+      .post("/team")
+      .set("Authorization", captain())
+      .send({ displayName: "Dup", email: "new@x.co" });
+    expect(dup.status).toBe(409);
+
+    const bad = await request(app)
+      .post("/team")
+      .set("Authorization", captain())
+      .send({ displayName: "No Email" });
+    expect(bad.status).toBe(400);
+  });
+
+  it("binds the invite to a clerkId when that email signs in", async () => {
+    const savedDriver = process.env.AUTH_DRIVER;
+    const savedSecret = process.env.DEV_AUTH_SECRET;
+    process.env.AUTH_DRIVER = "dev";
+    process.env.DEV_AUTH_SECRET = "devsecret";
+    resetVerifierForTests();
+    try {
+      await request(app)
+        .post("/team")
+        .set("Authorization", captain())
+        .send({ displayName: "Pend Val", email: "pend@x.co" });
+
+      const login = await request(app)
+        .post("/auth/token")
+        .send({ devSecret: "devsecret", sub: "vol-new", role: "voter_contact_clerk", email: "pend@x.co" });
+      expect(login.status).toBe(200);
+
+      const roster = await request(app).get("/team").set("Authorization", captain());
+      const bound = roster.body.find(
+        (m: { email: string | null }) => m.email === "pend@x.co"
+      );
+      expect(bound.clerkId).toBe("vol-new");
+    } finally {
+      if (savedDriver === undefined) delete process.env.AUTH_DRIVER;
+      else process.env.AUTH_DRIVER = savedDriver;
+      if (savedSecret === undefined) delete process.env.DEV_AUTH_SECRET;
+      else process.env.DEV_AUTH_SECRET = savedSecret;
+      resetVerifierForTests();
+    }
+  });
+
+  it("removes a member from the caller's team, 403 for another captain's", async () => {
+    const store = await getStore();
+    const mine = (await store.listTeamMembers({ captainClerkId: CAPTAIN }))[0];
+    const del = await request(app).delete(`/team/${mine.id}`).set("Authorization", captain());
+    expect(del.status).toBe(200);
+    const after = await request(app).get("/team").set("Authorization", captain());
+    expect(after.body.map((m: { id: string }) => m.id)).not.toContain(mine.id);
+
+    const others = (await store.listTeamMembers({ captainClerkId: OTHER_CAPTAIN }))[0];
+    const forbidden = await request(app)
+      .delete(`/team/${others.id}`)
+      .set("Authorization", captain());
+    expect(forbidden.status).toBe(403);
+  });
+});
+
+describe("POST /team/:clerkId/nudge", () => {
+  it("nudges a managed volunteer (sent:false with the noop mailer); 400/403 guards", async () => {
+    const ok = await request(app)
+      .post("/team/vol-1/nudge")
+      .set("Authorization", captain())
+      .send({ message: "Please claim your shift" });
+    expect(ok.status).toBe(200);
+    expect(ok.body).toHaveProperty("sent");
+
+    const missing = await request(app)
+      .post("/team/vol-1/nudge")
+      .set("Authorization", captain())
+      .send({});
+    expect(missing.status).toBe(400);
+
+    const other = await request(app)
+      .post("/team/vol-3/nudge")
+      .set("Authorization", captain())
+      .send({ message: "hi" });
+    expect(other.status).toBe(403);
   });
 });

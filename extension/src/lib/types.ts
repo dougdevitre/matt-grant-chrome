@@ -51,7 +51,7 @@ export interface ClerkIdentity {
 
 export interface TeamMember {
   id: string;
-  clerkId: string;
+  clerkId: string | null; // null while an invite is pending (not yet signed in)
   displayName: string;
   email: string | null;
   phone: string | null;

@@ -245,13 +245,24 @@ export function makeMemoryStore(): StorePort {
         })
         .sort((a, b) => a.displayName.localeCompare(b.displayName));
     },
+    async getTeamMember(id) {
+      return teamMembers.get(id);
+    },
     async getTeamMemberByClerkId(clerkId) {
       return [...teamMembers.values()].find((m) => m.clerkId === clerkId);
+    },
+    async getTeamMemberByEmail(email) {
+      const e = email.trim().toLowerCase();
+      return [...teamMembers.values()].find((m) => (m.email ?? "").toLowerCase() === e);
     },
     async createTeamMember(input: NewTeamMember) {
       const m: TeamMember = { ...input, id: randomUUID(), createdAt: now(), updatedAt: now() };
       teamMembers.set(m.id, m);
       return m;
+    },
+    async putTeamMember(member) {
+      teamMembers.set(member.id, member);
+      return member;
     },
 
     async appendAudit(evt) {
