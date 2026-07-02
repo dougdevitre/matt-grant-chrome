@@ -271,7 +271,12 @@ export interface GotvDashboard {
   byZip: GotvZipRow[];
 }
 
-export type ImportRowStatus = "new" | "duplicate" | "invalid" | "out_of_district";
+export type ImportRowStatus =
+  | "new"
+  | "duplicate"
+  | "invalid"
+  | "out_of_district"
+  | "suppressed";
 
 export interface ImportRow {
   firstName: string;
@@ -294,4 +299,5 @@ export interface ImportResult {
   created: number;
   skipped: number;
   contactIds: string[];
+  errors: { row: number; reason: string }[];
 }

@@ -18,6 +18,19 @@ export function ImportPanel({ canRead }: { canRead: boolean }) {
   const [total, setTotal] = useState(0);
   const [notVoted, setNotVoted] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [importErrors, setImportErrors] = useState<
+    { row: number; reason: string }[]
+  >([]);
+  const [addOpen, setAddOpen] = useState(false);
+  const [add, setAdd] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    email: "",
+    address: "",
+    city: "",
+    zip: "",
+  });
 
   // Load one page; offset 0 replaces the list (fresh load), otherwise appends.
   async function loadContacts(offset = 0, onlyNotVoted = notVoted) {
@@ -69,14 +82,43 @@ export function ImportPanel({ canRead }: { canRead: boolean }) {
   async function doCommit() {
     setBusy(true);
     setError(null);
+    setImportErrors([]);
     try {
       const r = await api.importCommit(csv);
-      setMsg(`Imported ${r.created}, skipped ${r.skipped}.`);
+      const errNote = r.errors.length ? `, ${r.errors.length} couldn't import` : "";
+      setMsg(`Imported ${r.created}, skipped ${r.skipped}${errNote}.`);
+      setImportErrors(r.errors);
       setPreview(null);
       setCsv("");
       await loadContacts();
     } catch (e) {
       setError(e instanceof Error ? e.message : "commit_failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function doAddContact() {
+    if (!add.firstName.trim() || !add.lastName.trim()) return;
+    setBusy(true);
+    setError(null);
+    setMsg(null);
+    try {
+      const c = await api.addContact({
+        firstName: add.firstName.trim(),
+        lastName: add.lastName.trim(),
+        phone: add.phone.trim() || undefined,
+        email: add.email.trim() || undefined,
+        address: add.address.trim() || undefined,
+        city: add.city.trim() || undefined,
+        zip: add.zip.trim() || undefined,
+      });
+      setMsg(`Added ${c.firstName} ${c.lastName}.`);
+      setAdd({ firstName: "", lastName: "", phone: "", email: "", address: "", city: "", zip: "" });
+      setAddOpen(false);
+      await loadContacts();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "add_failed");
     } finally {
       setBusy(false);
     }
@@ -112,6 +154,80 @@ export function ImportPanel({ canRead }: { canRead: boolean }) {
 
       {error ? <div className="warn" role="alert">{messageForError(error)}</div> : null}
       {msg ? <div className="ok-note">{msg}</div> : null}
+      {importErrors.length ? (
+        <div className="warn" role="alert">
+          <strong>Didn't import — fix and re-import:</strong>
+          <ul>
+            {importErrors.slice(0, 10).map((e) => (
+              <li key={e.row}>Row {e.row}: {e.reason}</li>
+            ))}
+          </ul>
+          {importErrors.length > 10 ? (
+            <p className="note">+{importErrors.length - 10} more</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="add-one">
+        <button className="linklike" onClick={() => setAddOpen((v) => !v)}>
+          {addOpen ? "Cancel" : "+ Add one contact"}
+        </button>
+        {addOpen ? (
+          <div className="form">
+            <div className="row">
+              <input
+                placeholder="First name"
+                value={add.firstName}
+                onChange={(e) => setAdd({ ...add, firstName: e.target.value })}
+              />
+              <input
+                placeholder="Last name"
+                value={add.lastName}
+                onChange={(e) => setAdd({ ...add, lastName: e.target.value })}
+              />
+            </div>
+            <div className="row">
+              <input
+                placeholder="Phone"
+                value={add.phone}
+                onChange={(e) => setAdd({ ...add, phone: e.target.value })}
+              />
+              <input
+                placeholder="Email"
+                value={add.email}
+                onChange={(e) => setAdd({ ...add, email: e.target.value })}
+              />
+            </div>
+            <input
+              placeholder="Address"
+              value={add.address}
+              onChange={(e) => setAdd({ ...add, address: e.target.value })}
+            />
+            <div className="row">
+              <input
+                placeholder="City"
+                value={add.city}
+                onChange={(e) => setAdd({ ...add, city: e.target.value })}
+              />
+              <input
+                placeholder="ZIP"
+                value={add.zip}
+                onChange={(e) => setAdd({ ...add, zip: e.target.value })}
+              />
+            </div>
+            <button
+              className="btn"
+              disabled={busy || !add.firstName.trim() || !add.lastName.trim()}
+              onClick={doAddContact}
+            >
+              Add contact
+            </button>
+            <p className="note">
+              Needs a phone or email. Skipped if they already exist or opted out.
+            </p>
+          </div>
+        ) : null}
+      </div>
 
       {preview ? (
         <div className="preview">
@@ -120,6 +236,7 @@ export function ImportPanel({ canRead }: { canRead: boolean }) {
             <span className="pill">{preview.counts.duplicate} dup</span>
             <span className="pill">{preview.counts.invalid} invalid</span>
             <span className="pill">{preview.counts.out_of_district} out-of-dist</span>
+            <span className="pill">{preview.counts.suppressed} opted-out</span>
           </div>
           <div className="preview-rows">
             {preview.rows.slice(0, 8).map((r, i) => (

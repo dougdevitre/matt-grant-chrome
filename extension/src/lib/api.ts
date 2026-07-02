@@ -211,6 +211,19 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ csv }),
     }),
+  addContact: (input: {
+    firstName: string;
+    lastName: string;
+    phone?: string;
+    email?: string;
+    address?: string;
+    city?: string;
+    zip?: string;
+  }) =>
+    call<Contact>("/contacts", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
   sendToContact: (templateId: string, contactId: string, idempotencyKey: string) =>
     call<{ status: string }>("/comms/send-to-contact", {
       method: "POST",

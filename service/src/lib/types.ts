@@ -360,7 +360,13 @@ export interface FollowUp {
 }
 
 // Import staging
-export type ImportRowStatus = "new" | "duplicate" | "invalid" | "out_of_district";
+// "suppressed" = the contact previously opted out; never silently re-added.
+export type ImportRowStatus =
+  | "new"
+  | "duplicate"
+  | "invalid"
+  | "out_of_district"
+  | "suppressed";
 
 export interface ImportRow {
   firstName: string;
@@ -373,6 +379,9 @@ export interface ImportRow {
   status: ImportRowStatus;
   reason: string | null;
   contactKey: string | null;
+  // Geocode result computed once at preview time so commit never re-geocodes.
+  inDistrict: boolean | null;
+  censusBlock: string | null;
 }
 
 export interface ImportPreview {
@@ -385,4 +394,7 @@ export interface ImportResult {
   created: number;
   skipped: number;
   contactIds: string[];
+  // Fixable rows that did not import (1-based CSV row number + why), so staff
+  // can correct and re-import instead of losing them silently.
+  errors: { row: number; reason: string }[];
 }
