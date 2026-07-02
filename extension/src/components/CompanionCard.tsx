@@ -23,7 +23,7 @@ export function CompanionCard({
         <button
           className="linklike companion-hide"
           onClick={onDismiss}
-          title="Hide site tips for now"
+          title="Stop showing site tips (turn back on in Settings)"
         >
           Hide
         </button>

@@ -163,7 +163,16 @@ export function ImportPanel({ canRead }: { canRead: boolean }) {
             <div key={c.id}>
               <div
                 className="contact contact-row"
+                role="button"
+                tabIndex={0}
+                aria-expanded={openId === c.id}
                 onClick={() => setOpenId((id) => (id === c.id ? null : c.id))}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setOpenId((id) => (id === c.id ? null : c.id));
+                  }
+                }}
               >
                 <div>
                   <strong>

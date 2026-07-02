@@ -14,6 +14,7 @@ import type {
 import { Countdown } from "./components/Countdown.js";
 import { CompanionCard } from "./components/CompanionCard.js";
 import { useActiveHost } from "./lib/useActiveHost.js";
+import { useStoredFlag } from "./lib/useStoredFlag.js";
 import { LocationForm } from "./components/LocationForm.js";
 import { ResourceCards } from "./components/ResourceCards.js";
 import { TaskQueue } from "./components/TaskQueue.js";
@@ -38,9 +39,10 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [needsAuth, setNeedsAuth] = useState(false);
   const [ready, setReady] = useState(false);
-  // Context-aware "Working here" card; dismissable for the session.
-  const [companionHidden, setCompanionHidden] = useState(false);
-  const activeHost = useActiveHost(!!me && !companionHidden);
+  // Context-aware "Working here" card — persistent preference (Settings toggle).
+  const [showSiteTips, setShowSiteTips] = useStoredFlag("showSiteTips", true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const activeHost = useActiveHost(!!me && showSiteTips);
   // First-run welcome — default hidden until we've read storage (avoids a flash).
   const [onboardSeen, setOnboardSeen] = useState(true);
 
@@ -148,6 +150,17 @@ export default function App() {
       <header className="hdr">
         <h1><img className="hdr-logo" src="icons/icon48.png" alt="" /> Matt Grant — Campaign Tools</h1>
         <div className="hdr-right">
+          {me ? (
+            <button
+              className="hdr-icon"
+              onClick={() => setSettingsOpen((v) => !v)}
+              title="Settings"
+              aria-label="Settings"
+              aria-expanded={settingsOpen}
+            >
+              ⚙
+            </button>
+          ) : null}
           <a
             className="hdr-help"
             href={`${DEFAULT_BASE}/guide/`}
@@ -164,6 +177,19 @@ export default function App() {
           ) : null}
         </div>
       </header>
+
+      {settingsOpen ? (
+        <div className="settings" role="group" aria-label="Settings">
+          <label className="settings-row">
+            <input
+              type="checkbox"
+              checked={showSiteTips}
+              onChange={(e) => setShowSiteTips(e.target.checked)}
+            />
+            Show site tips (the "Working here" card on campaign sites)
+          </label>
+        </div>
+      ) : null}
 
       {me && !onboardSeen ? (
         <div className="onboard" role="note">
@@ -220,13 +246,15 @@ export default function App() {
       <CompanionCard
         host={activeHost}
         scopes={scopes}
-        onDismiss={() => setCompanionHidden(true)}
+        onDismiss={() => setShowSiteTips(false)}
       />
 
       <nav className="tabs" role="tablist">
         {tabs.map((t) => (
           <button
             key={t.id}
+            role="tab"
+            aria-selected={activeTab === t.id}
             className={activeTab === t.id ? "tab active" : "tab"}
             onClick={() => setTab(t.id)}
           >

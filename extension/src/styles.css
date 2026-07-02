@@ -330,3 +330,14 @@ body {
   margin: 8px 0 2px; padding: 9px 11px; border: 1px solid #f1ddb4; border-radius: 8px;
   background: #fff3df; color: #6b4e00; font-size: 12px;
 }
+
+/* Settings gear + panel (slice A-2) */
+.hdr-icon { background: none; border: 0; cursor: pointer; font-size: 14px; line-height: 1; color: var(--muted); padding: 2px; }
+.hdr-icon:hover { color: var(--ink); }
+.hdr-icon:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.settings {
+  margin: 8px 0 2px; padding: 9px 11px; border: 1px solid var(--line);
+  border-radius: 8px; background: var(--surface-sunk);
+}
+.settings-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink); }
+.contact-row:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
