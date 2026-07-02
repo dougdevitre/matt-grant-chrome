@@ -135,6 +135,28 @@ shapes before you rely on the enrichment.
 
 ---
 
+## 4.5 Verify the MO-02 reference data (GOTV gate)
+
+The `mo02Locations.ts` school-district DESE codes + ZIP lists and the
+`mo02Candidates.ts` field ship as **DRAFT**. Before pointing real voters at the
+tool, replace them with verified values and prove it:
+
+```bash
+# Fill scripts/mo02-locations.csv (see mo02-locations.example.csv) with the
+# official DESE codes, generate the dataset, and paste it into mo02Locations.ts:
+node scripts/build-mo02-locations.mjs scripts/mo02-locations.csv
+
+# Then enforce the readiness gate (fails if any DESE code is still unverified):
+RUN_GOTV_READINESS=1 npm test
+```
+
+✅ **Gate:** `RUN_GOTV_READINESS=1 npm test` is green (the `MO-02 reference data —
+GOTV readiness gate` test passes only when every `deseCode` is filled and ZIPs
+are valid). This test is skipped in normal CI, so the draft data doesn't block
+development — but it must pass before GOTV.
+
+---
+
 ## 5. Publish the extension (optional)
 
 For one-click install + auto-update across the volunteer team, submit to the
@@ -151,3 +173,4 @@ Chrome Web Store — full copy, permission justifications, and checklist in
 - [ ] Data persists across a redeploy (Airtable on).
 - [ ] Any enabled provider (SMS/Calendar/Gmail) verified end-to-end.
 - [ ] Clerk roles assigned for the real team.
+- [ ] `RUN_GOTV_READINESS=1 npm test` green — MO-02 district/candidate data verified.
