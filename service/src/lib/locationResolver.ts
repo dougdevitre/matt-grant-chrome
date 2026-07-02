@@ -32,8 +32,15 @@ function card(c: ResourceCard): ResourceCard {
   return c;
 }
 
+interface LeaInfo {
+  url: string;
+  name: string | null;
+  phone: string | null;
+  address: string | null;
+}
+
 // Full catalog. Filtering by role/phase/confidence happens after.
-function catalog(loc: ResolvedLocation, leaUrl: string): ResourceCard[] {
+function catalog(loc: ResolvedLocation, lea: LeaInfo): ResourceCard[] {
   const allPhases: Phase[] = [
     "PHASE_1_REGISTER",
     "PHASE_2_PLAN",
@@ -71,12 +78,30 @@ function catalog(loc: ResolvedLocation, leaUrl: string): ResourceCard[] {
       title: "Vote early",
       body: "No-excuse in-person early voting runs Jul 21 through Aug 3. Bring a valid photo ID.",
       ctaLabel: "Find your early-vote site",
-      ctaUrl: leaUrl,
+      ctaUrl: lea.url,
       source: "SOS",
       requiresScope: null,
       phases: ["PHASE_2_PLAN", "PHASE_3_TURNOUT"],
       confidenceMin: "MEDIUM",
     }),
+    // Your county's Local Election Authority — real office contact when we know
+    // the county (MO-02 counties); omitted otherwise so we never show a blank.
+    ...(lea.name && (lea.phone || lea.address)
+      ? [
+          card({
+            id: "vote.authority",
+            lane: "vote",
+            title: lea.name,
+            body: [lea.address, lea.phone].filter(Boolean).join(" · "),
+            ctaLabel: "Visit your election office",
+            ctaUrl: lea.url,
+            source: "SOS",
+            requiresScope: null,
+            phases: allPhases,
+            confidenceMin: "LOW",
+          }),
+        ]
+      : []),
     card({
       id: "vote.polling",
       lane: "vote",
@@ -291,9 +316,12 @@ export async function resolveLocalContext(
   };
 
   const phase = currentPhase(now);
-  const cards = catalog(location, lea.url).filter((c) =>
-    visible(c, phase, scopes, confidence)
-  );
+  const cards = catalog(location, {
+    url: lea.url,
+    name: lea.name,
+    phone: lea.phone,
+    address: lea.address,
+  }).filter((c) => visible(c, phase, scopes, confidence));
 
   const response: ResolveResponse = { location, phase, cards };
 

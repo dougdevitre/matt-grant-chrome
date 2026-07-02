@@ -122,9 +122,15 @@ export async function geocodeAddress(
 }
 
 /** Resolve a Missouri county to its Local Election Authority (Phase 4). */
-export async function leaForCounty(
-  county: string
-): Promise<{ leaId: string | null; name: string | null; url: string; kind: string }> {
+export async function leaForCounty(county: string): Promise<{
+  leaId: string | null;
+  name: string | null;
+  url: string;
+  kind: string;
+  phone: string | null;
+  address: string | null;
+  hoursNote: string | null;
+}> {
   const { resolveLea } = await import("./lea.js");
   const lea = resolveLea(county);
   return {
@@ -132,6 +138,9 @@ export async function leaForCounty(
     name: lea.name,
     url: lea.jurisdictionUrl ?? lea.sosLookupUrl,
     kind: lea.kind,
+    phone: lea.phone,
+    address: lea.address,
+    hoursNote: lea.hoursNote,
   };
 }
 

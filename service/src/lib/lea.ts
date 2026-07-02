@@ -14,6 +14,7 @@
 // Source to populate from: https://www.sos.mo.gov/elections/goVoteMissouri/localelectionauthority
 
 import type { LeaKind, LeaRecord } from "./types.js";
+import { MO02_AUTHORITIES } from "../data/countyAuthorities.js";
 
 const SOS_LOOKUP =
   "https://www.sos.mo.gov/elections/goVoteMissouri/localelectionauthority";
@@ -69,20 +70,24 @@ export function resolveLea(county: string): LeaRecord {
   const keyed = withCountySuffix(county);
   const kind = kindFor(keyed);
   const display = titleCase(keyed);
-  const officeName =
+  const generatedName =
     kind === "board_of_election_commissioners"
       ? `${display} Board of Election Commissioners`
       : `${display} Clerk`;
 
+  // Real office details for the MO-02 counties; unknown counties keep the
+  // null placeholders + the always-available SOS lookup.
+  const authority = MO02_AUTHORITIES[keyed];
+
   return {
     county: titleCase(normalize(county)),
     leaId: `mo_${keyed.replace(/[^a-z]+/g, "_").replace(/^_|_$/g, "")}`,
-    name: officeName,
-    kind,
-    jurisdictionUrl: null, // populate from SOS directory
-    phone: null,
-    address: null,
-    hoursNote: null,
+    name: authority?.name ?? generatedName,
+    kind: authority?.kind ?? kind,
+    jurisdictionUrl: authority?.jurisdictionUrl ?? null,
+    phone: authority?.phone ?? null,
+    address: authority?.address ?? null,
+    hoursNote: authority?.hoursNote ?? null,
     sosLookupUrl: SOS_LOOKUP,
   };
 }
