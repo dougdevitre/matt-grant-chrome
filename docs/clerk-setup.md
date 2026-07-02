@@ -15,9 +15,12 @@ unless `AUTH_DRIVER=clerk` (dev auth is forbidden) and `JWT_SECRET` is set to a 
    (`<issuer>/.well-known/jwks.json`).
 2. Give each clerk a **role** in Clerk **`publicMetadata.role`** — one of:
    `registration_clerk`, `voter_contact_clerk`, `list_data_clerk`, `compliance_clerk`,
-   `events_clerk`, `social_comms_clerk`, `admin`. (Anyone without one of these is treated as
-   `public` — civic info only, no clerk actions.) Set these one-by-one in the dashboard, or in
-   bulk from a CSV with `scripts/set-clerk-roles.mjs` (see **Bulk role assignment** below).
+   `events_clerk`, `social_comms_clerk`, `team_captain`, `admin`. (Anyone without one of these is
+   treated as `public` — civic info only, no clerk actions.) A **`team_captain`** additionally sees
+   the **Team** tab for the volunteers on their roster (the captain→volunteer link lives in the
+   `TeamMembers` store table, keyed by the volunteer's Clerk id — see `docs/airtable-setup.md`). Set
+   roles one-by-one in the dashboard, or in bulk from a CSV with `scripts/set-clerk-roles.mjs` (see
+   **Bulk role assignment** below).
 3. Make sure the **session token carries the role**. The verifier reads
    `publicMetadata.role` first, then a top-level `role` claim — so either:
    - use the default session token (it includes `publicMetadata`), or

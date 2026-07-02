@@ -21,6 +21,8 @@ import type {
   Role,
   Shift,
   Task,
+  TeamMember,
+  VolunteerWork,
   VoteMethod,
 } from "./types.js";
 
@@ -104,6 +106,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ lat, lng }),
     }),
+
+  // Team (captain view)
+  team: () => call<TeamMember[]>("/team"),
+  volunteerWork: (clerkId: string) =>
+    call<VolunteerWork>(`/team/${encodeURIComponent(clerkId)}/work`),
 
   // Tasks
   tasks: (zip?: string | null) =>

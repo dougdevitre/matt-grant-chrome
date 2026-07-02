@@ -30,6 +30,7 @@ are for human-readable filtering in the Airtable UI.
 | `Outbox`       | `IdempotencyKey` **(read)**, `Status`                      |
 | `Audit`        | `Action`, `Seq` (number) **(read)**, `Hash`                |
 | `FollowUps`    | `RecordId` **(read)**, `ContactId`, `Status`               |
+| `TeamMembers`  | `ClerkId` **(read)**, `CaptainClerkId`                     |
 
 Notes:
 - `RecordId` holds our own UUID (not Airtable's `rec…` id); the adapter upserts by matching it.
@@ -37,6 +38,10 @@ Notes:
 - `IdempotencyKey` makes the outbox replay check a point read, preserving send idempotency.
 - `FollowUps` backs the GOTV reminder feature (`/followups`, `POST /contacts/:id/followups`, and the
   Turnout tab's reminders list). Without this table, those endpoints 500 under `STORE_DRIVER=airtable`.
+- `TeamMembers` is the volunteer roster that powers the **Team** tab for `team_captain` users:
+  `ClerkId` (the volunteer's Clerk id), `CaptainClerkId` (their captain), plus a display name/email in
+  the `Data` blob. Seed one row per volunteer, keyed to their Clerk id. Only needed if you use team
+  captains.
 
 ## Verifying
 

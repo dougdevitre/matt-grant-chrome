@@ -30,6 +30,7 @@ const VALID_ROLES = new Set([
   "compliance_clerk",
   "events_clerk",
   "social_comms_clerk",
+  "team_captain",
   "admin",
   "public",
 ]);

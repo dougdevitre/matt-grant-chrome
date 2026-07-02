@@ -16,6 +16,8 @@ import type {
   ContactFilter,
   NewFollowUp,
   FollowUpFilter,
+  NewTeamMember,
+  TeamMemberFilter,
 } from "./store.js";
 import type {
   AuditEvent,
@@ -28,6 +30,7 @@ import type {
   Phase,
   Shift,
   Task,
+  TeamMember,
 } from "./types.js";
 
 function now(): string {
@@ -45,6 +48,7 @@ export function makeMemoryStore(): StorePort {
   const contactsByKey = new Map<string, string>(); // contactKey -> contactId
   const contactLogs: ContactLog[] = [];
   const followUps = new Map<string, FollowUp>();
+  const teamMembers = new Map<string, TeamMember>();
   const auditLog: AuditEvent[] = [];
   let lastAuditHash: string | null = null;
   let nextAuditSeq = 0;
@@ -230,6 +234,24 @@ export function makeMemoryStore(): StorePort {
     async putFollowUp(followUp) {
       followUps.set(followUp.id, followUp);
       return followUp;
+    },
+
+    async listTeamMembers(filter: TeamMemberFilter = {}) {
+      return [...teamMembers.values()]
+        .filter((m) => {
+          if (filter.captainClerkId && m.captainClerkId !== filter.captainClerkId) return false;
+          if (filter.active !== undefined && m.active !== filter.active) return false;
+          return true;
+        })
+        .sort((a, b) => a.displayName.localeCompare(b.displayName));
+    },
+    async getTeamMemberByClerkId(clerkId) {
+      return [...teamMembers.values()].find((m) => m.clerkId === clerkId);
+    },
+    async createTeamMember(input: NewTeamMember) {
+      const m: TeamMember = { ...input, id: randomUUID(), createdAt: now(), updatedAt: now() };
+      teamMembers.set(m.id, m);
+      return m;
     },
 
     async appendAudit(evt) {

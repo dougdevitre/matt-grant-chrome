@@ -9,13 +9,17 @@ export type Scope =
   | "list.tag"
   | "comms.draft"
   | "comms.send"
+  | "comms.send_registration"
   | "comms.approve"
+  | "sms.send"
   | "optout.manage"
   | "events.write"
   | "finance.read"
   | "audit.read"
   | "task.read"
-  | "task.write";
+  | "task.write"
+  | "team.read"
+  | "team.manage";
 
 export type Role =
   | "registration_clerk"
@@ -24,6 +28,7 @@ export type Role =
   | "compliance_clerk"
   | "events_clerk"
   | "social_comms_clerk"
+  | "team_captain"
   | "admin"
   | "public";
 
@@ -42,6 +47,34 @@ export interface ClerkIdentity {
   scopes: Scope[];
   // Set when an admin is previewing another role via `GET /me?as=<role>`.
   viewAs?: boolean;
+}
+
+export interface TeamMember {
+  id: string;
+  clerkId: string;
+  displayName: string;
+  email: string | null;
+  phone: string | null;
+  teamId: string | null;
+  captainClerkId: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Subset of the server AuditEvent the captain view renders.
+export interface TeamActivity {
+  action: string;
+  entity: string;
+  entityId: string;
+  ts: string;
+}
+
+export interface VolunteerWork {
+  volunteer: TeamMember;
+  tasks: Task[];
+  shifts: Shift[];
+  recentActivity: TeamActivity[];
 }
 
 export interface PhaseConfig {

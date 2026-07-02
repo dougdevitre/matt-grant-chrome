@@ -31,12 +31,23 @@ describe("scopesForRole", () => {
       "compliance_clerk",
       "events_clerk",
       "social_comms_clerk",
+      "team_captain",
       "admin",
     ];
     for (const role of clerkRoles) {
       expect(hasScope(scopesForRole(role), "task.read")).toBe(true);
       expect(hasScope(scopesForRole(role), "task.write")).toBe(true);
     }
+  });
+
+  it("gives the team captain team scopes but not send/approve powers", () => {
+    const scopes = scopesForRole("team_captain");
+    expect(hasScope(scopes, "team.read")).toBe(true);
+    expect(hasScope(scopes, "team.manage")).toBe(true);
+    expect(hasScope(scopes, "voter.read")).toBe(true);
+    // Least privilege: a captain manages people, not comms/finance.
+    expect(hasScope(scopes, "comms.approve")).toBe(false);
+    expect(hasScope(scopes, "sms.send")).toBe(false);
   });
 
   it("limits the public build to voter.read", () => {
