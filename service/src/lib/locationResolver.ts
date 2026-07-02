@@ -22,6 +22,8 @@ import {
   nearbyVenues,
 } from "./publicData.js";
 import { isConsistentSelection, leaIdFor } from "./locationOptions.js";
+import { primaryNames } from "../data/mo02Candidates.js";
+import { NODE_ENV } from "../config.js";
 
 const SOS_REGISTER = "https://www.sos.mo.gov/elections/goVoteMissouri/register";
 const SOS_STATUS = "https://voteroutreach.sos.mo.gov/portal/";
@@ -135,7 +137,7 @@ function catalog(loc: ResolvedLocation, lea: LeaInfo): ResourceCard[] {
       id: "issues.candidates",
       lane: "issues",
       title: "Who's on the MO-02 ballot",
-      body: "Review the candidates and where Matt Grant stands.",
+      body: `Republican primary (Aug 4): ${primaryNames("R")}. See the full official list and where Matt stands.`,
       ctaLabel: "View candidates",
       ctaUrl: SOS_BALLOT,
       source: "SOS",
@@ -325,10 +327,14 @@ export async function resolveLocalContext(
 
   const response: ResolveResponse = { location, phase, cards };
 
-  // Optional public-data enrichment — off by default so resolve stays fast and
-  // deterministic. When ENRICH_RESOLVE=true, attach ACS demographics + nearby
-  // civic venues; both degrade to null/empty and never block the response.
-  if (process.env.ENRICH_RESOLVE === "true") {
+  // Public-data enrichment: ACS demographics + nearby civic venues. On by
+  // default in production; opt-in elsewhere (so dev/tests stay fast and
+  // deterministic). Explicit ENRICH_RESOLVE always wins. Both degrade to
+  // null/empty and never block the response.
+  const enrich =
+    process.env.ENRICH_RESOLVE === "true" ||
+    (NODE_ENV === "production" && process.env.ENRICH_RESOLVE !== "false");
+  if (enrich) {
     const [demographics, venues] = await Promise.all([
       demographicsForZip(input.zip),
       nearbyVenues(geo.lat, geo.lng),
@@ -343,6 +349,19 @@ export async function resolveLocalContext(
       venues,
     };
     response.enrichment = enrichment;
+
+    // Surface the real numbers in the (finance-gated) neighborhood card so the
+    // enrichment is actually visible, not just attached to the payload.
+    const dem = enrichment.demographics;
+    const demoCard = response.cards.find((c) => c.id === "issues.demographics");
+    if (demoCard && dem && (dem.population != null || dem.medianHouseholdIncome != null)) {
+      const pop = dem.population != null ? `~${dem.population.toLocaleString()} residents` : null;
+      const inc =
+        dem.medianHouseholdIncome != null
+          ? `median household income ~$${dem.medianHouseholdIncome.toLocaleString()}`
+          : null;
+      demoCard.body = `${[pop, inc].filter(Boolean).join(", ")}. Neutral Census context for outreach planning.`;
+    }
   }
 
   return response;
