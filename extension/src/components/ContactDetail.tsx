@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api } from "../lib/api.js";
+import { messageForError } from "../lib/errors.js";
 import type { Contact, PollingPlace, VoteMethod } from "../lib/types.js";
 
 const METHODS: { v: VoteMethod; label: string }[] = [
@@ -137,7 +138,7 @@ export function ContactDetail({
       </div>
 
       {msg ? <div className="ok-note">{msg}</div> : null}
-      {err ? <div className="warn">{err}</div> : null}
+      {err ? <div className="warn" role="alert">{messageForError(err)}</div> : null}
     </div>
   );
 }

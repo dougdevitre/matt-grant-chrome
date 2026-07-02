@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api.js";
+import { messageForError } from "../lib/errors.js";
 import type { Contact, ImportPreview } from "../lib/types.js";
 import { ContactDetail } from "./ContactDetail.js";
 
@@ -109,7 +110,7 @@ export function ImportPanel({ canRead }: { canRead: boolean }) {
         </button>
       </div>
 
-      {error ? <div className="warn">{error}</div> : null}
+      {error ? <div className="warn" role="alert">{messageForError(error)}</div> : null}
       {msg ? <div className="ok-note">{msg}</div> : null}
 
       {preview ? (

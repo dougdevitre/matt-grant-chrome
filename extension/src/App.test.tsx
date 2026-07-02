@@ -23,6 +23,7 @@ vi.mock("./lib/api.js", () => ({
     contacts: vi.fn(),
     templates: vi.fn(),
   },
+  DEFAULT_BASE: "https://svc.example",
   signOut: vi.fn(),
   signInDev: vi.fn(),
   signInClerk: vi.fn(),
@@ -57,6 +58,22 @@ async function renderAs(role: string, scopes: Scope[]) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+describe("App role explainer", () => {
+  it("tells a Voter (public role) how to get access", async () => {
+    await renderAs("public", ["voter.read"]);
+    expect(
+      screen.getByText(/ask your campaign admin to assign your role/i)
+    ).toBeInTheDocument();
+  });
+
+  it("does not show the Voter explainer for a clerk role", async () => {
+    await renderAs("registration_clerk", ["voter.read", "task.read", "task.write"]);
+    expect(
+      screen.queryByText(/ask your campaign admin to assign your role/i)
+    ).not.toBeInTheDocument();
+  });
 });
 
 describe("App tab gating", () => {

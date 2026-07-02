@@ -57,7 +57,7 @@ export function Scheduler({
     }
   }
 
-  if (error) return <div className="warn">Couldn't load events: {error}</div>;
+  if (error) return <div className="warn" role="alert">{messageForError(error)}</div>;
   if (!events) return <p className="note">Loading the schedule…</p>;
   if (events.length === 0)
     return (

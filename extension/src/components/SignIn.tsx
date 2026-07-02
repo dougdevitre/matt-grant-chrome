@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { DEFAULT_BASE, LOCK_BASE, signInDev, signInClerk } from "../lib/api.js";
+import { messageForError } from "../lib/errors.js";
 import { clerkEnabled } from "../lib/clerkConfig.js";
 import { ClerkSignIn } from "./ClerkSignIn.js";
 import type { Role } from "../lib/types.js";
@@ -152,7 +153,7 @@ export function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
             <button className="btn" disabled={!canSubmit} onClick={submit}>
               {busy ? "Signing in…" : "Sign in"}
             </button>
-            {error ? <div className="warn">Sign-in failed: {error}</div> : null}
+            {error ? <div className="warn" role="alert">{messageForError(error)}</div> : null}
           </>
         )}
       </div>

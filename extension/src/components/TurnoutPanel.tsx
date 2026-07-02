@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api.js";
+import { messageForError } from "../lib/errors.js";
 import type { FollowUp, GotvDashboard } from "../lib/types.js";
 
 // GOTV turnout dashboard: how many contacts have cast a ballot, overall and by
@@ -38,7 +39,7 @@ export function TurnoutPanel() {
   if (error) {
     return (
       <div className="panel">
-        <div className="warn">Couldn't load turnout: {error}</div>
+        <div className="warn" role="alert">{messageForError(error)}</div>
       </div>
     );
   }

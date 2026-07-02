@@ -53,7 +53,7 @@ export function TaskQueue({
     }
   }
 
-  if (error) return <div className="warn">Couldn't load tasks: {error}</div>;
+  if (error) return <div className="warn" role="alert">{messageForError(error)}</div>;
   if (!tasks) return <p className="note">Loading your queue…</p>;
   if (tasks.length === 0)
     return (
