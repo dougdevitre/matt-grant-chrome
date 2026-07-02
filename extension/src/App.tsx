@@ -279,7 +279,7 @@ export default function App() {
         <Scheduler me={me} county={county} zip={zip} />
       ) : null}
       {activeTab === "turnout" ? <TurnoutPanel /> : null}
-      {activeTab === "team" ? <TeamPanel /> : null}
+      {activeTab === "team" && me ? <TeamPanel me={me} /> : null}
       {activeTab === "import" ? <ImportPanel canRead={canRead} /> : null}
       {activeTab === "comms" && me ? <CommsPanel me={me} /> : null}
     </div>

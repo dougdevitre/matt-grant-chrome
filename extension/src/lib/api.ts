@@ -111,6 +111,16 @@ export const api = {
   team: () => call<TeamMember[]>("/team"),
   volunteerWork: (clerkId: string) =>
     call<VolunteerWork>(`/team/${encodeURIComponent(clerkId)}/work`),
+  assignTask: (clerkId: string, taskId: string) =>
+    call<Task>(`/team/${encodeURIComponent(clerkId)}/assign-task`, {
+      method: "POST",
+      body: JSON.stringify({ taskId }),
+    }),
+  assignShift: (clerkId: string, shiftId: string) =>
+    call<Shift>(`/team/${encodeURIComponent(clerkId)}/assign-shift`, {
+      method: "POST",
+      body: JSON.stringify({ shiftId }),
+    }),
 
   // Tasks
   tasks: (zip?: string | null) =>

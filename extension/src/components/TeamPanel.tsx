@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api.js";
 import { messageForError } from "../lib/errors.js";
-import type { TeamMember } from "../lib/types.js";
+import type { ClerkIdentity, TeamMember } from "../lib/types.js";
 import { VolunteerDetail } from "./VolunteerDetail.js";
 
 // Team Captain view: the captain's roster of volunteers. Each row expands to a
-// read-only summary of that volunteer's tasks, shifts, and recent activity.
-export function TeamPanel() {
+// summary of that volunteer's tasks, shifts, and recent activity — plus an
+// assign control when the captain can manage the team.
+export function TeamPanel({ me }: { me: ClerkIdentity }) {
+  const canManage = me.scopes.includes("team.manage");
   const [roster, setRoster] = useState<TeamMember[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -57,7 +59,9 @@ export function TeamPanel() {
             </div>
             {m.teamId ? <span className="tag">{m.teamId}</span> : null}
           </div>
-          {openId === m.clerkId ? <VolunteerDetail clerkId={m.clerkId} /> : null}
+          {openId === m.clerkId ? (
+            <VolunteerDetail clerkId={m.clerkId} canManage={canManage} />
+          ) : null}
         </div>
       ))}
     </div>
