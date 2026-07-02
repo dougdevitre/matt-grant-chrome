@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Privacy Policy — Matt Grant for Congress Campaign Tools</title>
+    <!--
+      Privacy policy for the Chrome extension + backend. Served statically at
+      /privacy.html so it can be used as the Chrome Web Store "Privacy policy
+      URL" (see docs/chrome-web-store.md). Mirrors the data disclosures there.
+      TODO before publishing: confirm the contact email below with the campaign.
+    -->
+    <style>
+      :root {
+        --navy: #11203b;
+        --red: #b22234;
+        --ink: #11203b;
+        --muted: #5b6675;
+        --line: #dfe4ec;
+        --bg: #f4f6fa;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+        color: var(--ink);
+        background: var(--bg);
+      }
+      .wrap { max-width: 760px; margin: 0 auto; padding: 40px 20px 64px; }
+      .eyebrow {
+        text-transform: uppercase; letter-spacing: .08em; font-size: 13px;
+        font-weight: 700; color: var(--red); margin: 0 0 8px;
+      }
+      h1 { font-size: 30px; line-height: 1.2; margin: 0 0 6px; }
+      h2 { font-size: 20px; margin: 30px 0 8px; color: var(--navy); }
+      .updated { color: var(--muted); font-size: 14px; margin: 0 0 8px; }
+      .card {
+        background: #fff; border: 1px solid var(--line); border-radius: 12px;
+        padding: 20px 22px; margin-top: 18px;
+      }
+      ul { margin: 8px 0; padding-left: 22px; }
+      li { margin: 6px 0; }
+      .k { font-weight: 700; }
+      a { color: var(--navy); }
+      footer {
+        margin-top: 34px; color: var(--muted); font-size: 14px;
+        border-top: 1px solid var(--line); padding-top: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <p class="eyebrow">Matt Grant for Congress · Campaign Tools</p>
+      <h1>Privacy Policy</h1>
+      <p class="updated">Last updated: July 2, 2026</p>
+
+      <p>
+        This policy covers the <strong>Matt Grant for Congress — Campaign Tools</strong>
+        Chrome extension and its backend service. The tool is an internal
+        productivity aid for <strong>authorized campaign clerks and volunteers</strong>
+        for Missouri's 2nd Congressional District. It is not a consumer product
+        and is not directed to the general public or to children.
+      </p>
+
+      <div class="card">
+        <h2>What the extension stores</h2>
+        <ul>
+          <li>
+            <span class="k">Your own settings</span> — the backend Service URL,
+            your selected MO-02 location (county, school district, ZIP), and UI
+            preferences such as the "site tips" toggle. These are kept in Chrome
+            <code>storage</code> on your device so the panel remembers them.
+          </li>
+          <li>
+            <span class="k">Your sign-in session</span> — the extension uses
+            <code>cookies</code> on the campaign's authentication provider (Clerk)
+            so you stay signed in.
+          </li>
+        </ul>
+        <p>
+          The extension does <strong>not</strong> collect your browsing history,
+          read the content of pages you visit, or run any analytics or tracking.
+          It ships no secrets and no remotely hosted code.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>Data handled by the backend</h2>
+        <p>
+          All privileged work happens on a secured backend, not in the browser.
+          When clerks use the tool for campaign tasks, the backend may process
+          and store campaign records (for example, contact lists a clerk imports,
+          task and event data, and message templates). This data:
+        </p>
+        <ul>
+          <li>is restricted to <span class="k">campaign and election purposes</span>,
+            consistent with Missouri law governing voter-list use;</li>
+          <li>is accessible only to authorized clerks according to their role;</li>
+          <li>honors <span class="k">opt-out</span> requests — recipients who opt
+            out are recorded and excluded from further outreach; and</li>
+          <li>for any outbound messaging, carries the required
+            "Paid for by" disclaimer and follows applicable TCPA consent and
+            opt-out rules.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>What we do not do</h2>
+        <ul>
+          <li>We do <span class="k">not sell</span> your data or campaign data to third parties.</li>
+          <li>We do <span class="k">not use or transfer</span> data for purposes unrelated
+            to the tool's single purpose.</li>
+          <li>We do <span class="k">not use</span> data to determine creditworthiness or for lending.</li>
+          <li>We do <span class="k">not load remote code</span>; the extension runs only its
+            bundled, reviewed scripts.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>Third-party services</h2>
+        <p>
+          The tool integrates with services the campaign operates or relies on —
+          for example Clerk (sign-in) and Airtable (campaign-record storage), and,
+          when enabled, Google Calendar/Gmail and an SMS provider for outreach.
+          Public-data lookups (such as the U.S. Census geocoder) and official
+          voter resources are <strong>linked out to</strong> — for example the
+          Missouri Secretary of State site for registration and polling places —
+          and are never scraped or re-hosted. Each service's own privacy terms
+          apply to data it processes.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>Access, retention, and questions</h2>
+        <p>
+          Access is limited to authorized campaign staff. To ask about the data
+          the tool holds about you, to request correction or deletion, or with any
+          privacy question, contact the campaign at
+          <a href="mailto:privacy@mattgrantforcongress.org">privacy@mattgrantforcongress.org</a>
+          or reach your campaign admin. Records are retained only as long as needed
+          for campaign operations and any applicable legal requirements.
+        </p>
+      </div>
+
+      <footer>
+        Internal campaign tool. Access is limited to authorized clerks.<br />
+        <a href="/">Home</a> · <a href="/guide/">User guide</a>
+      </footer>
+    </div>
+  </body>
+</html>

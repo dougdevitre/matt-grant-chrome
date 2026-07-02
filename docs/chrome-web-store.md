@@ -103,9 +103,10 @@ Fill these into the store's Privacy tab:
 - **Data used for creditworthiness / lending:** No.
 - **Remote code:** No. CSP is `script-src 'self' 'wasm-unsafe-eval'`; the WASM
   allowance is for Clerk's crypto. No remotely hosted JS is loaded.
-- **Privacy policy URL:** required for a published listing — host one (a short
-  page stating the above; the campaign site or the service's `/` landing page
-  can carry it) and link it here.
+- **Privacy policy URL:** required for a published listing. The service serves
+  one at **`https://<app-runner-domain>/privacy.html`** (source:
+  `service/public/privacy.html`, linked from the `/` landing page). Confirm the
+  contact email in that file before publishing, then paste the URL here.
 
 ## Submission checklist
 
