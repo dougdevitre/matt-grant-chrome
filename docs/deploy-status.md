@@ -1,10 +1,13 @@
 # Deploy status & handoff (production)
 
-Snapshot of how far the **production deploy** of the clerk-tool service has gotten, and the
-exact steps left. The application itself is finished and merged on `main` (CI green); what
-remains is standing up the AWS runtime. Anyone with AWS + Airtable + Clerk admin access can
-finish steps 1–3 below in ~10–15 minutes. See `docs/deploy.md` for the full reference and
-`docs/clerk-setup.md` / `docs/airtable-setup.md` for provider details.
+Snapshot of the **production deploy** of the clerk-tool service. See `docs/deploy.md` for the full
+reference and `docs/clerk-setup.md` / `docs/airtable-setup.md` for provider details.
+
+> **STATUS (2026-07-02): the backend is LIVE.** App Runner service `matt-grant-clerk-service` is
+> **RUNNING** at **`https://ezvnqn5e5i.us-east-1.awsapprunner.com`** (the URL baked into the
+> extension). Verified: `/health` ok, `/ready` **200** (Airtable connected + persisting), and it's on
+> the latest `main` (auto-deploy). The only remaining work is the **last mile** — Clerk dashboard
+> (Native API on) + assign roles + distribute the extension — see "Going live for real users" below.
 
 ## ✅ Done
 
@@ -18,18 +21,19 @@ finish steps 1–3 below in ~10–15 minutes. See `docs/deploy.md` for the full 
 - **IAM instance role** — `matt-grant-apprunner-instance`, trusted by
   `tasks.apprunner.amazonaws.com`, granting `ssm:GetParameter*` on
   `/matt-grant-chrome/prod/*` + `kms:Decrypt`.
-- **App Runner service** — partially configured in the console (us-east-1): source = GitHub
-  `dougdevitre/matt-grant-chrome` @ `main`; runtime Nodejs 22; build
-  `npm ci && npm run build:service && npm run build:download` (the `build:download` step packs the
-  extension zip so `/download/matt-grant-campaign-tools.zip` is served, not a 404);
-  start `node service/dist/index.js`; port `8787`;
-  env vars `NODE_ENV=production`, `AUTH_DRIVER=clerk`, `SSM_PREFIX=/matt-grant-chrome/prod`,
-  `ALLOWED_ORIGIN=chrome-extension://placeholder`; instance role selected. **Not yet created**
-  — the GitHub source connection wasn't finished (see step 1).
+- **App Runner service** — ✅ **created and RUNNING** (us-east-1, `matt-grant-clerk-service`, id
+  `20d4ffd6a89d484d97aff2f13114e50e`): source = GitHub `dougdevitre/matt-grant-chrome` @ `main`;
+  runtime Nodejs 22; build `npm ci && npm run build:service && npm run build:download`;
+  start `node service/dist/index.js`; port `8787`; instance role `matt-grant-apprunner-instance`.
+  Default domain **`ezvnqn5e5i.us-east-1.awsapprunner.com`**. `STORE_DRIVER=airtable` on and
+  `/ready` 200. (`ALLOWED_ORIGIN` set to the real extension origin.)
 
-## ▫️ Remaining — 3 steps
+## Runtime bring-up — ✅ complete (kept for reference / disaster recovery)
 
-### 1. Finish creating the App Runner service
+Steps 1 and 2 below are **done** (service RUNNING, Airtable on). They're retained only in case the
+service ever needs to be recreated. The live remaining work is under "Going live for real users."
+
+### 1. ✅ Finish creating the App Runner service — DONE (running at `ezvnqn5e5i…`)
 The blocker was the **GitHub source connection** (an `aws apprunner create-service` CLI attempt
 failed with `connection ARN ... 'None'` — i.e. no `AVAILABLE` connection). Easiest fix is the
 console, which completes the GitHub handshake for you:
@@ -43,7 +47,7 @@ console, which completes the GitHub handshake for you:
 4. Copy the **Default domain** → that's the service URL. Verify:
    `curl https://<url>/health` → `{"ok":true}`.
 
-### 2. Turn on Airtable persistence
+### 2. ✅ Turn on Airtable persistence — DONE (`/ready` 200)
 Until this is done the service runs on its in-memory store (data resets on each deploy).
 
 1. Create an **Airtable Personal Access Token** with scopes `data.records:read`,
