@@ -294,3 +294,20 @@ body {
   font: inherit; font-size: 12px; background: none; border: 0; padding: 0;
   color: var(--accent); text-decoration: underline; cursor: pointer;
 }
+
+/* Context-aware "Working here" companion card */
+.companion {
+  border: 1px solid var(--line); border-left: 3px solid var(--ink);
+  border-radius: 8px; padding: 9px 11px; margin: 8px 0 2px; background: var(--surface-sunk);
+}
+.companion-head { display: flex; justify-content: space-between; align-items: center; }
+.companion-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.companion-hide.linklike { font-size: 11px; background: none; border: 0; padding: 0; color: var(--muted); text-decoration: underline; cursor: pointer; }
+.companion-title { margin: 4px 0 2px; font-size: 13px; color: var(--ink); }
+.companion-body { margin: 0; font-size: 12px; color: var(--muted); }
+.companion-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.companion-action {
+  font-size: 12px; font-weight: 600; text-decoration: none; color: var(--ink);
+  border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px;
+}
+.companion-action:hover { border-color: var(--ink); }

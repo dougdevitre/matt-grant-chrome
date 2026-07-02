@@ -11,6 +11,8 @@ import type {
   Role,
 } from "./lib/types.js";
 import { Countdown } from "./components/Countdown.js";
+import { CompanionCard } from "./components/CompanionCard.js";
+import { useActiveHost } from "./lib/useActiveHost.js";
 import { LocationForm } from "./components/LocationForm.js";
 import { ResourceCards } from "./components/ResourceCards.js";
 import { TaskQueue } from "./components/TaskQueue.js";
@@ -35,6 +37,9 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [needsAuth, setNeedsAuth] = useState(false);
   const [ready, setReady] = useState(false);
+  // Context-aware "Working here" card; dismissable for the session.
+  const [companionHidden, setCompanionHidden] = useState(false);
+  const activeHost = useActiveHost(!!me && !companionHidden);
 
   const load = useCallback(async (as?: Role | null) => {
     setError(null);
@@ -159,6 +164,12 @@ export default function App() {
       ) : null}
 
       {phase ? <Countdown config={phase} /> : null}
+
+      <CompanionCard
+        host={activeHost}
+        scopes={scopes}
+        onDismiss={() => setCompanionHidden(true)}
+      />
 
       <nav className="tabs" role="tablist">
         {tabs.map((t) => (

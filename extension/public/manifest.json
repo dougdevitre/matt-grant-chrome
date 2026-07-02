@@ -32,7 +32,12 @@
   "host_permissions": [
     "http://localhost:8787/*",
     "https://clerk.mattgrantforcongress.org/*",
-    "https://*.awsapprunner.com/*"
+    "https://*.awsapprunner.com/*",
+    "https://sos.mo.gov/*",
+    "https://*.sos.mo.gov/*",
+    "https://airtable.com/*",
+    "https://*.airtable.com/*",
+    "https://docs.google.com/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
