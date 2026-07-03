@@ -66,10 +66,11 @@ the Clerk tab falls back to manual token paste — so local dev and CI need no C
    `VITE_CLERK_JWT_TEMPLATE=<name>` if you use a JWT template to carry `role` (step 3 above).
 2. **Allow-list the extension origin in Clerk.** Clerk's Frontend API rejects requests from an
    unknown origin, so add the extension's origin — `chrome-extension://<your-extension-id>` — to
-   the instance's allowed origins (Clerk dashboard / Backend API). The ID is stable only if the
-   manifest has a `key`; add a packed-extension `key` to `extension/public/manifest.json` (and
-   thus a fixed ID) before allow-listing. Until then, re-allow-list whenever the unpacked ID
-   changes.
+   the instance's allowed origins. Easiest: `CLERK_SECRET_KEY=sk_live_… node
+   scripts/set-clerk-origins.mjs` (it defaults to both extension ids and unions with the current
+   list). The ID is stable only if the manifest has a `key`; add a packed-extension `key` to
+   `extension/public/manifest.json` (and thus a fixed ID) before allow-listing. Until then,
+   re-allow-list whenever the unpacked ID changes (pass the new id as an arg to the script).
 3. **Manifest** already ships the Clerk CSP (`script-src 'self' 'wasm-unsafe-eval'`),
    `host_permissions` for `https://clerk.mattgrantforcongress.org/*`, and the `cookies`
    permission. Add your **deployed API origin** to `host_permissions` too (the panel fetches the
@@ -93,16 +94,28 @@ carrying *both* until the `chrome-extension://<id>` origin is registered in the 
 
 Fix: make sure the **Native API is on** (Configure → Native Applications; if it were off you'd instead
 see *"The Native API is disabled for this instance"*), then add the origin of the build in
-`chrome://extensions` to `allowed_origins`. Side-loaded/downloaded id (from the committed manifest
-`key`): `abalnefilpmcfbabfaljnophamaegfgj`; Chrome Web Store id: `ofnchgiipoimjokjbacjhdcbmlnpaphg`.
+`chrome://extensions` to `allowed_origins`. Use the helper script — it reads the secret from the env
+(never the command line), unions with whatever is already allow-listed, and defaults to both extension
+ids (`abalnefilpmcfbabfaljnophamaegfgj` side-loaded, `ofnchgiipoimjokjbacjhdcbmlnpaphg` Web Store):
 
 ```bash
 # CLERK_SECRET_KEY stays in the env — never on the command line / shell history.
+CLERK_SECRET_KEY=sk_live_… node scripts/set-clerk-origins.mjs           # add the extension origins
+CLERK_SECRET_KEY=sk_live_… node scripts/set-clerk-origins.mjs --list    # just show the current list
+node scripts/set-clerk-origins.mjs --dry-run                           # preview, no key needed
+```
+
+<details><summary>Equivalent raw curl (fallback)</summary>
+
+```bash
 curl -X PATCH https://api.clerk.com/v1/instance \
   -H "Content-type: application/json" \
   -H "Authorization: Bearer $CLERK_SECRET_KEY" \
   -d '{"allowed_origins": ["chrome-extension://abalnefilpmcfbabfaljnophamaegfgj","chrome-extension://ofnchgiipoimjokjbacjhdcbmlnpaphg"]}'
 ```
+Note the raw PATCH **replaces** the whole array; the script unions instead, so it never clobbers
+existing origins.
+</details>
 
 Reload the extension and retry. (Refs: Clerk *Deploy a Chrome Extension to production*; clerk/javascript#3044.)
 
@@ -123,6 +136,9 @@ node scripts/set-clerk-roles.mjs clerks.csv --dry-run
 
 # Apply (secret read from the env var only — never commit or pass it on the CLI):
 CLERK_SECRET_KEY=sk_live_… node scripts/set-clerk-roles.mjs clerks.csv
+
+# A single user without a CSV (e.g. grant yourself admin to test):
+CLERK_SECRET_KEY=sk_live_… node scripts/set-clerk-roles.mjs --email you@example.org --role admin
 ```
 
 Notes:

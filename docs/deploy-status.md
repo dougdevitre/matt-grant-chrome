@@ -127,4 +127,8 @@ read -rs AIRTABLE_PAT;     echo; put SecureString AIRTABLE_PAT     "$AIRTABLE_PA
 `ALLOWED_ORIGIN=chrome-extension://abalnefilpmcfbabfaljnophamaegfgj`.
 
 **5. Per new user:** share the download page → they install + sign in → an admin sets their
-`publicMetadata.role` in Clerk (or bulk via `scripts/set-clerk-roles.mjs`).
+`publicMetadata.role` in Clerk. One user: `CLERK_SECRET_KEY=sk_live_… node
+scripts/set-clerk-roles.mjs --email them@example.org --role registration_clerk`; bulk: the same
+script with a CSV. To (re-)allow-list an extension origin in Clerk:
+`CLERK_SECRET_KEY=sk_live_… node scripts/set-clerk-origins.mjs` (safe/idempotent — see
+`docs/clerk-setup.md`).
