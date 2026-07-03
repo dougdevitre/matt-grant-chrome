@@ -31,6 +31,18 @@ Upload the **contents** of `extension/dist` as a zip (manifest at the zip root).
 > Decide once and keep it consistent, because the ID is baked into
 > `ALLOWED_ORIGIN` and the Clerk origin allow-list.
 
+> **Store item identity (this submission).** The upload zip is built **without**
+> the `key`, so the store assigns its own ID. The published item is
+> **`ofnchgiipoimjokjbacjhdcbmlnpaphg`**. This differs from the side-loaded ID the
+> committed `key` produces (`abalnefilpmcfbabfaljnophamaegfgj`). Before real users
+> install the **store** build, add the store origin to both allow-lists:
+> - Service `ALLOWED_ORIGIN` (App Runner env, comma-joined to keep the side-loaded
+>   origin valid too): `chrome-extension://abalnefilpmcfbabfaljnophamaegfgj,chrome-extension://ofnchgiipoimjokjbacjhdcbmlnpaphg`
+> - Clerk **allowed origins**: add `chrome-extension://ofnchgiipoimjokjbacjhdcbmlnpaphg`.
+>
+> Then redeploy. (The `PROD_SERVICE_URL` baked into `extension/src/lib/api.ts` is
+> unchanged — the store build still talks to `ezvnqn5e5i.us-east-1.awsapprunner.com`.)
+
 ## Listing copy
 
 **Name** (from manifest): `Matt Grant for Congress — Campaign Tools`
@@ -72,28 +84,37 @@ Reviewers require a justification per permission. These map to the current
 | `cookies` | Required by `@clerk/chrome-extension` to read the Clerk session on the campaign's Clerk domain so the clerk stays signed in. |
 | `geolocation` | Opt-in only, behind the "Use my current location" button. The device coordinates are sent once to reverse-geocode the voter's county/ZIP/district and jump to the official polling-place lookup; they are not stored or logged, and manual entry is always available. |
 
-**Host permissions** — the first two are the backend and the auth provider; the
-rest let the panel detect when the clerk's **active tab is on one of these
-campaign-related sites** (hostname only) so it can show a relevant "working here"
-tip. Note: opening a link (the tip's buttons) needs no host permission — these
-grants are solely to read the active tab's origin, and only for these specific
-sites. The extension reads no page content and injects no scripts.
+**Host permissions — required (install-time).** Only three, both needed for the
+app to function at all: the backend it calls and the auth provider. These are the
+only host grants a fresh install requests, which keeps the listing off the CWS
+in-depth host-permission review.
 
 | Host pattern | Why |
 |---|---|
-| `http://localhost:8787/*`, `https://*.awsapprunner.com/*` | Talk to the backend microservice (local dev + deployed App Runner). |
+| `http://localhost:8787/*`, `https://ezvnqn5e5i.us-east-1.awsapprunner.com/*` | Talk to the backend microservice (local dev + the deployed App Runner service — the exact host the client calls, not a wildcard). |
 | `https://clerk.mattgrantforcongress.org/*` | Clerk auth (session token exchange; the Clerk SDK also reads its session cookie here). |
-| `https://sos.mo.gov/*`, `https://*.sos.mo.gov/*` | Detect the official MO SoS voter site to show registration / polling-place tips. |
-| `https://*.airtable.com/*`, `https://docs.google.com/*`, `https://mail.google.com/*`, `https://calendar.google.com/*` | Detect the campaign's working tools to show import / logging / scheduling tips. |
+
+**Optional host permissions — runtime, opt-in.** Everything below lives in
+`optional_host_permissions`, **not** `host_permissions`. They are requested only
+when the clerk turns on the **"site tips"** switch in Settings (Chrome shows its
+own grant prompt); a fresh install asks for none of them. They let the panel
+detect when the **active tab is on one of these campaign-related sites**
+(hostname only) to show a "working here" tip. Opening a link (the tip's buttons)
+needs no host permission — these grants are solely to read the active tab's
+origin. The extension reads no page content and injects no scripts. Declining, or
+never enabling the toggle, leaves every other feature working.
+
+| Host pattern | Why |
+|---|---|
+| `https://sos.mo.gov/*` (+ subdomains) | Detect the official MO SoS voter site to show registration / polling-place tips. |
+| `https://airtable.com/*`, `https://docs.google.com/*`, `https://sheets.google.com/*`, `https://mail.google.com/*`, `https://calendar.google.com/*` (+ subdomains) | Detect the campaign's working tools to show import / logging / scheduling tips. |
 | County authority domains (`stlouiscountymo.gov`, `sccmo.org`, `franklinmo.org`, `warrencountymoclerk.com` + subdomains) | Detect a MO-02 Local Election Authority site to show a dates/lookup tip. |
 | `winred.com`, `x.com`/`twitter.com`, `facebook.com`, `instagram.com`, `youtube.com` (+ subdomains) | Detect donation + social channels to show a compliance tip. |
 
-> The "working here" tips are user-toggleable (the "site tips" switch in
-> Settings), read only the active tab's hostname — never the path or page
-> content — and are documented in the privacy policy. If a reviewer still wants a
-> smaller surface, the social/WinRed hosts can be dropped: they only power
-> contextual tips, not core function (keep `companionSites.ts` in lockstep with
-> the manifest if you do).
+> `companionSites.ts` (`COMPANION_ORIGINS`) is the single source of truth for the
+> optional list; a test (`companionPermissions.test.ts`) asserts it stays in exact
+> lockstep with `optional_host_permissions` in the manifest and that none of these
+> hosts leak back into the required `host_permissions`.
 
 ## Privacy & data disclosures
 

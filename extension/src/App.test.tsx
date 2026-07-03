@@ -2,8 +2,8 @@
 // Import tab only with list.import, and the Comms tab only with a comms scope.
 // (The server re-checks every call; this is cosmetic gating.)
 
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "./App.js";
 import { api } from "./lib/api.js";
@@ -60,6 +60,10 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 describe("App role explainer", () => {
   it("tells a Voter (public role) how to get access", async () => {
     await renderAs("public", ["voter.read"]);
@@ -77,13 +81,29 @@ describe("App role explainer", () => {
 });
 
 describe("App settings + a11y", () => {
-  it("opens Settings and toggles the site-tips preference", async () => {
+  it("site tips default off; enabling turns them on (no perms API in tests)", async () => {
     await renderAs("registration_clerk", ["voter.read", "task.read", "task.write"]);
     await userEvent.click(screen.getByRole("button", { name: /settings/i }));
     const cb = screen.getByRole("checkbox", { name: /show site tips/i });
-    expect(cb).toBeChecked();
-    await userEvent.click(cb);
+    // Off by default now — the companion hosts are optional/runtime.
     expect(cb).not.toBeChecked();
+    await userEvent.click(cb);
+    // With no chrome.permissions API in the test env the grant resolves true.
+    await waitFor(() => expect(cb).toBeChecked());
+    await userEvent.click(cb);
+    await waitFor(() => expect(cb).not.toBeChecked());
+  });
+
+  it("keeps site tips off and warns when the host grant is denied", async () => {
+    const request = vi.fn().mockResolvedValue(false);
+    vi.stubGlobal("chrome", { permissions: { request, remove: vi.fn() } });
+    await renderAs("registration_clerk", ["voter.read", "task.read", "task.write"]);
+    await userEvent.click(screen.getByRole("button", { name: /settings/i }));
+    const cb = screen.getByRole("checkbox", { name: /show site tips/i });
+    await userEvent.click(cb);
+    await waitFor(() => expect(request).toHaveBeenCalled());
+    expect(cb).not.toBeChecked();
+    expect(screen.getByRole("alert")).toHaveTextContent(/need permission/i);
   });
 
   it("marks the active tab with aria-selected", async () => {

@@ -92,7 +92,10 @@ Stable extension id: **`abalnefilpmcfbabfaljnophamaegfgj`** (from the pinned man
 - **Configure → Native applications → enable the Native API.** Without this the extension shows
   *"The Native API is disabled for this instance."* (Chrome extensions are "native" apps to Clerk.)
 - **Configure → Domains:** a production instance must have a domain associated (even with no web app).
-- Allow-list the extension origin `chrome-extension://abalnefilpmcfbabfaljnophamaegfgj`.
+- Allow-list the extension origin `chrome-extension://abalnefilpmcfbabfaljnophamaegfgj` (and the
+  Chrome Web Store id `chrome-extension://ofnchgiipoimjokjbacjhdcbmlnpaphg` once published). **Skipping
+  this makes sign-in fail with *"only one of the 'Origin' and 'Authorization' headers should be
+  provided"*** — see the troubleshooting note in `docs/clerk-setup.md`.
 - **Configure → API keys:** copy the **Publishable key** (`pk_live_…`) and the **Frontend API URL**.
   `CLERK_ISSUER` = that Frontend API URL; `CLERK_JWKS_URL` = `<issuer>/.well-known/jwks.json`.
 
