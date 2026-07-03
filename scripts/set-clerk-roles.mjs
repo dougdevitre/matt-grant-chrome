@@ -9,6 +9,8 @@
 // Usage:
 //   CLERK_SECRET_KEY=sk_live_xxx node scripts/set-clerk-roles.mjs clerks.csv
 //   CLERK_SECRET_KEY=sk_live_xxx node scripts/set-clerk-roles.mjs clerks.csv --dry-run
+//   # a single user without a CSV (e.g. to grant yourself admin):
+//   CLERK_SECRET_KEY=sk_live_xxx node scripts/set-clerk-roles.mjs --email you@example.org --role admin
 //
 // CSV format (header required, case-insensitive): two columns `email,role`.
 //   email,role
@@ -112,27 +114,50 @@ async function setRole(userId, role, secret) {
   });
 }
 
+// Pull `--flag value` out of the args (returns the value or undefined).
+function flag(args, name) {
+  const i = args.indexOf(name);
+  return i !== -1 ? args[i + 1] : undefined;
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const dryRun = args.includes("--dry-run");
-  const csvPath = args.find((a) => !a.startsWith("--"));
+  const email = flag(args, "--email");
+  const role = flag(args, "--role");
+  // Anything positional that isn't a flag value is the CSV path.
+  const flagValues = new Set([email, role].filter(Boolean));
+  const csvPath = args.find(
+    (a) => !a.startsWith("--") && !flagValues.has(a),
+  );
 
-  if (!csvPath) {
-    die("usage: node scripts/set-clerk-roles.mjs <clerks.csv> [--dry-run]");
+  if ((email && !role) || (role && !email)) {
+    die("--email and --role must be given together");
+  }
+  if (!email && !csvPath) {
+    die(
+      "usage: node scripts/set-clerk-roles.mjs <clerks.csv> [--dry-run]\n" +
+        "   or: node scripts/set-clerk-roles.mjs --email you@example.org --role admin",
+    );
   }
   const secret = process.env.CLERK_SECRET_KEY;
   if (!dryRun && !secret) {
     die("CLERK_SECRET_KEY env var is required (set it; do not commit it)");
   }
 
-  let text;
-  try {
-    text = readFileSync(csvPath, "utf8");
-  } catch (e) {
-    die(`cannot read CSV ${csvPath}: ${e.message}`);
+  // Inline single-user path skips the CSV entirely.
+  let rows;
+  if (email) {
+    rows = [{ email, role, line: 1 }];
+  } else {
+    let text;
+    try {
+      text = readFileSync(csvPath, "utf8");
+    } catch (e) {
+      die(`cannot read CSV ${csvPath}: ${e.message}`);
+    }
+    rows = parseCsv(text);
   }
-
-  const rows = parseCsv(text);
 
   // Validate every role up front so a typo never half-applies the batch.
   const bad = rows.filter((r) => !VALID_ROLES.has(r.role));
