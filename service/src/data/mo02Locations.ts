@@ -10,8 +10,11 @@
 // St. Louis/St. Charles/Warren portions). The school-district rosters and ZIP
 // lists below are a best-effort draft from public sources and MUST be confirmed
 // by campaign staff (ideally in an Airtable "Locations" table). `leaId` is a
-// canonical stable key derived from the district; swap in the official DESE/NCES
-// code once verified (see `deseCode`).
+// canonical stable key derived from the district and is what the resolver uses
+// at runtime; `deseCode` is an optional enrichment slot (nothing reads it yet).
+//
+// The GOTV-readiness gate (verifyMo02.ts) blocks until `verified` below is set
+// to `true` — flip it once campaign staff have eyeballed the rosters/ZIPs.
 
 export interface SchoolDistrictRef {
   name: string;
@@ -30,12 +33,16 @@ export interface CountyRef {
 }
 
 export interface LocationDataset {
+  /** Set true once campaign staff have confirmed the rosters/ZIPs. Gates GOTV. */
+  verified: boolean;
   counties: CountyRef[];
 }
 
 const d = (name: string, leaId: string): SchoolDistrictRef => ({ name, leaId, deseCode: null });
 
 export const MO02_LOCATIONS: LocationDataset = {
+  // DRAFT — flip to true only after campaign staff confirm the rosters + ZIPs.
+  verified: false,
   counties: [
     {
       county: "Franklin County",

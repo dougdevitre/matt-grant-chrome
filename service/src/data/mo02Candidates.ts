@@ -3,7 +3,9 @@
 // ⚠️ DRAFT — VERIFY against the SOS official candidate filing before GOTV:
 // https://s1.sos.mo.gov/candidatesonweb/  (Primary Election Aug 4, 2026).
 // Sourced from Ballotpedia (2026-07). Update names/spellings + add anyone
-// missing once confirmed.
+// missing once confirmed, then set `verified: true` (the GOTV-readiness gate in
+// verifyMo02.ts blocks until it is). This card has no runtime fallback — the
+// slate is shown to voters exactly as listed here, so an omission is visible.
 
 export interface Candidate {
   name: string;
@@ -14,12 +16,16 @@ export interface Candidate {
 export interface PrimaryField {
   electionDate: string; // ISO date of the primary
   office: string;
+  /** Set true once the slate is confirmed against the SOS filing. Gates GOTV. */
+  verified: boolean;
   candidates: Candidate[];
 }
 
 export const MO02_PRIMARY: PrimaryField = {
   electionDate: "2026-08-04",
   office: "U.S. House — Missouri District 2",
+  // DRAFT — flip to true only after confirming the slate against the SOS filing.
+  verified: false,
   candidates: [
     { name: "Ann Wagner", party: "R", incumbent: true },
     { name: "Matt Grant", party: "R" },

@@ -137,23 +137,29 @@ shapes before you rely on the enrichment.
 
 ## 4.5 Verify the MO-02 reference data (GOTV gate)
 
-The `mo02Locations.ts` school-district DESE codes + ZIP lists and the
-`mo02Candidates.ts` field ship as **DRAFT**. Before pointing real voters at the
-tool, replace them with verified values and prove it:
+The `mo02Locations.ts` rosters/ZIP lists and the `mo02Candidates.ts` slate ship
+as **DRAFT** (`verified: false` on each). Before pointing real voters at the
+tool, confirm them and record that confirmation:
 
-```bash
-# Fill scripts/mo02-locations.csv (see mo02-locations.example.csv) with the
-# official DESE codes, generate the dataset, and paste it into mo02Locations.ts:
-node scripts/build-mo02-locations.mjs scripts/mo02-locations.csv
+1. **Candidates** (voter-facing, no fallback — the card shows the slate exactly
+   as listed). Confirm the Republican + Democratic fields against the official
+   SOS filing (`https://s1.sos.mo.gov/candidatesonweb/`), fix any names/omissions
+   in `mo02Candidates.ts`, then set `MO02_PRIMARY.verified = true`.
+2. **Locations.** Eyeball the county / school-district / ZIP rosters in
+   `mo02Locations.ts` (optionally regenerate from a CSV with
+   `node scripts/build-mo02-locations.mjs scripts/mo02-locations.csv`), then set
+   `MO02_LOCATIONS.verified = true`. `deseCode` is an optional enrichment slot —
+   nothing reads it, so it is **not** required to pass the gate.
+3. Prove it:
+   ```bash
+   RUN_GOTV_READINESS=1 npm test
+   ```
 
-# Then enforce the readiness gate (fails if any DESE code is still unverified):
-RUN_GOTV_READINESS=1 npm test
-```
-
-✅ **Gate:** `RUN_GOTV_READINESS=1 npm test` is green (the `MO-02 reference data —
-GOTV readiness gate` test passes only when every `deseCode` is filled and ZIPs
-are valid). This test is skipped in normal CI, so the draft data doesn't block
-development — but it must pass before GOTV.
+✅ **Gate:** `RUN_GOTV_READINESS=1 npm test` is green — the `MO-02 reference data —
+GOTV readiness gate` passes only when **both datasets are marked `verified: true`**
+and the structural checks hold (every district has a `leaId`, ZIPs are 5-digit, a
+Republican is on the ballot, `electionDate` = 2026-08-04). It's skipped in normal
+CI so the draft data doesn't block development — but it must pass before GOTV.
 
 ---
 

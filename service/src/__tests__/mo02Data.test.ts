@@ -1,7 +1,7 @@
 // MO-02 reference data: always-on structural invariants (regression net) plus a
 // GOTV-readiness gate that is skipped in the normal suite (the data ships as
 // DRAFT) but enforced when RUN_GOTV_READINESS=1 — so the go-live checklist can
-// prove every DESE code was verified before GOTV.
+// prove the data was human-confirmed (the `verified` flags) before GOTV.
 
 import { describe, expect, it } from "vitest";
 import { MO02_LOCATIONS } from "../data/mo02Locations.js";
@@ -27,10 +27,13 @@ describe("MO-02 reference data — structure", () => {
     expect(MO02_PRIMARY.candidates.some((c) => c.party === "R" && c.incumbent)).toBe(true);
   });
 
-  it("mo02DataProblems flags the unverified DESE codes while the data is DRAFT", () => {
-    // Documents the current gap: every deseCode is null today, so problems exist.
-    // When the data is verified this list empties and the readiness gate passes.
-    expect(mo02DataProblems().some((p) => /DESE code not verified/.test(p))).toBe(true);
+  it("mo02DataProblems flags the unverified datasets while the data is DRAFT", () => {
+    // Documents the current gap: both datasets ship verified:false, so problems
+    // exist. When staff confirm the data and flip both flags (and the structural
+    // checks pass), this list empties and the readiness gate passes.
+    const problems = mo02DataProblems();
+    expect(problems.some((p) => /MO02_LOCATIONS not marked verified/.test(p))).toBe(true);
+    expect(problems.some((p) => /MO02_PRIMARY not marked verified/.test(p))).toBe(true);
   });
 });
 
@@ -38,7 +41,7 @@ describe("MO-02 reference data — structure", () => {
 // go-live gate. Mirrors the packed-zip gate pattern in health.test.ts.
 const gate = process.env.RUN_GOTV_READINESS ? it : it.skip;
 describe("MO-02 reference data — GOTV readiness gate", () => {
-  gate("has no unverified data (all DESE codes filled, ZIPs valid)", () => {
+  gate("has no unverified data (both datasets marked verified, ZIPs valid)", () => {
     expect(mo02DataProblems()).toEqual([]);
   });
 });
