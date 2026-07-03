@@ -78,6 +78,34 @@ the Clerk tab falls back to manual token paste — so local dev and CI need no C
    tab, and confirm `GET /me` returns the role's scopes and an SMS step-up re-auths. (This is the
    one step that can't run from the build sandbox — egress + a registered origin are required.)
 
+### Troubleshooting: sign-in fails with an Origin/Authorization error
+
+> *"For security purposes, only one of the 'Origin' and 'Authorization' headers should be provided,
+> but not both."*
+
+This is Clerk's Frontend API rejecting the sign-in request, and it means **step 2 (allow-list the
+extension origin) hasn't been done for the ID you're actually running.** In an extension Chrome always
+sets `Origin` automatically and `@clerk/chrome-extension` also sends an `Authorization` header (the
+client JWT — an extension can't use third-party cookies to the FAPI host); Clerk refuses requests
+carrying *both* until the `chrome-extension://<id>` origin is registered in the instance's
+`allowed_origins`. It is **not** a code/manifest bug — the manifest already keeps
+`https://clerk.mattgrantforcongress.org/*` in `host_permissions`.
+
+Fix: make sure the **Native API is on** (Configure → Native Applications; if it were off you'd instead
+see *"The Native API is disabled for this instance"*), then add the origin of the build in
+`chrome://extensions` to `allowed_origins`. Side-loaded/downloaded id (from the committed manifest
+`key`): `abalnefilpmcfbabfaljnophamaegfgj`; Chrome Web Store id: `ofnchgiipoimjokjbacjhdcbmlnpaphg`.
+
+```bash
+# CLERK_SECRET_KEY stays in the env — never on the command line / shell history.
+curl -X PATCH https://api.clerk.com/v1/instance \
+  -H "Content-type: application/json" \
+  -H "Authorization: Bearer $CLERK_SECRET_KEY" \
+  -d '{"allowed_origins": ["chrome-extension://abalnefilpmcfbabfaljnophamaegfgj","chrome-extension://ofnchgiipoimjokjbacjhdcbmlnpaphg"]}'
+```
+
+Reload the extension and retry. (Refs: Clerk *Deploy a Chrome Extension to production*; clerk/javascript#3044.)
+
 ## Bulk role assignment
 
 To set `publicMetadata.role` for many clerks at once, use the helper script with a CSV. It
