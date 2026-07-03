@@ -112,6 +112,26 @@ export const COMPANION_SITES: CompanionSite[] = [
   // must be added here AND to manifest host_permissions.
 ];
 
+// The `optional_host_permissions` origins the companion feature needs, derived
+// from the site registry so the manifest and the runtime request can't drift
+// (a test asserts they match manifest.json exactly). Two patterns per suffix —
+// the apex host and its subdomains — mirroring `hostMatches` below. A suffix
+// that is itself a subdomain of another suffix (e.g. voteroutreach.sos.mo.gov
+// under sos.mo.gov) is dropped: its origins are already covered by the parent's
+// `*.` pattern, and emitting them would diverge from the manifest.
+const ALL_SUFFIXES = COMPANION_SITES.flatMap((s) => s.hostSuffixes);
+const ROOT_SUFFIXES = ALL_SUFFIXES.filter(
+  (suffix) => !ALL_SUFFIXES.some((other) => suffix.endsWith(`.${other}`))
+);
+export const COMPANION_ORIGINS: string[] = Array.from(
+  new Set(
+    ROOT_SUFFIXES.flatMap((suffix) => [
+      `https://${suffix}/*`,
+      `https://*.${suffix}/*`,
+    ])
+  )
+);
+
 const hostMatches = (host: string, suffix: string): boolean =>
   host === suffix || host.endsWith(`.${suffix}`);
 

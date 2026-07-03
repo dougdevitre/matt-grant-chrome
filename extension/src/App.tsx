@@ -15,6 +15,10 @@ import { Countdown } from "./components/Countdown.js";
 import { CompanionCard } from "./components/CompanionCard.js";
 import { useActiveHost } from "./lib/useActiveHost.js";
 import { useStoredFlag } from "./lib/useStoredFlag.js";
+import {
+  requestCompanionHosts,
+  removeCompanionHosts,
+} from "./lib/companionPermissions.js";
 import { LocationForm } from "./components/LocationForm.js";
 import { ResourceCards } from "./components/ResourceCards.js";
 import { TaskQueue } from "./components/TaskQueue.js";
@@ -41,8 +45,29 @@ export default function App() {
   const [needsAuth, setNeedsAuth] = useState(false);
   const [ready, setReady] = useState(false);
   // Context-aware "Working here" card — persistent preference (Settings toggle).
-  const [showSiteTips, setShowSiteTips] = useStoredFlag("showSiteTips", true);
+  // Off by default: the companion host access lives in `optional_host_permissions`
+  // and is requested at runtime the first time the user turns tips on.
+  const [showSiteTips, setShowSiteTips] = useStoredFlag("showSiteTips", false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [tipsDenied, setTipsDenied] = useState(false);
+
+  // Enabling tips must first obtain the optional host permissions (Chrome shows
+  // its own prompt). Only persist the preference if the grant succeeds; a denial
+  // leaves it off and surfaces a short note.
+  const toggleSiteTips = useCallback(
+    async (next: boolean) => {
+      if (!next) {
+        setShowSiteTips(false);
+        setTipsDenied(false);
+        void removeCompanionHosts();
+        return;
+      }
+      const granted = await requestCompanionHosts();
+      setTipsDenied(!granted);
+      if (granted) setShowSiteTips(true);
+    },
+    [setShowSiteTips]
+  );
   const activeHost = useActiveHost(!!me && showSiteTips);
   // First-run welcome — default hidden until we've read storage (avoids a flash).
   const [onboardSeen, setOnboardSeen] = useState(true);
@@ -187,10 +212,20 @@ export default function App() {
             <input
               type="checkbox"
               checked={showSiteTips}
-              onChange={(e) => setShowSiteTips(e.target.checked)}
+              onChange={(e) => void toggleSiteTips(e.target.checked)}
             />
             Show site tips (the "Working here" card on campaign sites)
           </label>
+          <p className="note settings-note">
+            Turning this on asks Chrome for permission to see which campaign site
+            you're on. Nothing else is requested at install.
+          </p>
+          {tipsDenied ? (
+            <p className="note settings-note" role="alert">
+              Site tips need permission to read the current site — enable it above
+              to grant access.
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -249,7 +284,7 @@ export default function App() {
       <CompanionCard
         host={activeHost}
         scopes={scopes}
-        onDismiss={() => setShowSiteTips(false)}
+        onDismiss={() => void toggleSiteTips(false)}
       />
 
       <nav className="tabs" role="tablist">
