@@ -5,9 +5,10 @@
 // JSON blob holding the full typed object — pragmatic and drift-resistant.
 //
 // Expected tables (create in the base): Tasks, Events, Shifts, Templates,
-// Contacts, ContactLogs, FollowUps, OptOut, Outbox, Audit. Each needs a `Data` long-text
-// field. Point reads use filterByFormula on these single-line-text columns, so
-// they must exist where used: `RecordId` (Tasks/Events/Shifts/Templates/Contacts),
+// Contacts, ContactLogs, FollowUps, OptOut, Outbox, Audit, SocialPosts,
+// SocialBlasts. Each needs a `Data` long-text field. Point reads use
+// filterByFormula on these single-line-text columns, so they must exist where
+// used: `RecordId` (Tasks/Events/Shifts/Templates/Contacts/SocialPosts/SocialBlasts),
 // `ContactKey` (Contacts/OptOut), `IdempotencyKey` (Outbox). The remaining columns
 // (Status, Zip, County, Category, RegStatus, Action, EventId) are for human-readable
 // filtering in the Airtable UI. See docs/airtable-setup.md.
@@ -28,6 +29,10 @@ import type {
   FollowUpFilter,
   NewTeamMember,
   TeamMemberFilter,
+  NewSocialPost,
+  SocialPostFilter,
+  NewSocialBlast,
+  SocialBlastFilter,
 } from "./store.js";
 import { randomUUID } from "node:crypto";
 import type {
@@ -39,6 +44,8 @@ import type {
   MessageTemplate,
   OutboxEntry,
   Shift,
+  SocialBlast,
+  SocialPost,
   Task,
   TeamMember,
 } from "./types.js";
@@ -346,6 +353,65 @@ export async function makeAirtableStore(): Promise<StorePort> {
         ContactId: followUp.contactId,
         Status: followUp.status,
       });
+    },
+
+    async listSocialPosts(filter: SocialPostFilter = {}) {
+      return (await listAll<SocialPost>("SocialPosts"))
+        .filter((p) => {
+          if (filter.status && p.status !== filter.status) return false;
+          if (filter.blastId && p.blastId !== filter.blastId) return false;
+          if (filter.category && p.category !== filter.category) return false;
+          if (filter.phase && !p.phases.includes(filter.phase)) return false;
+          return true;
+        })
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    },
+    async getSocialPost(id) {
+      return findOneByFormula<SocialPost>("SocialPosts", "RecordId", id);
+    },
+    async createSocialPost(input: NewSocialPost) {
+      const p: SocialPost = {
+        ...input,
+        id: randomUUID(),
+        complianceApprovalId: null,
+        shareCount: 0,
+        createdAt: now(),
+        updatedAt: now(),
+      };
+      return upsert("SocialPosts", p, { Category: p.category, Status: p.status });
+    },
+    async putSocialPost(post) {
+      return upsert("SocialPosts", post, { Category: post.category, Status: post.status });
+    },
+    async incrementShareCount(id) {
+      // No transactional CAS in Airtable; re-read immediately before writing.
+      // Narrows the race to the get→put gap (fine at clerk-tool volume).
+      const cur = await findOneByFormula<SocialPost>("SocialPosts", "RecordId", id);
+      if (!cur) return null;
+      const updated: SocialPost = {
+        ...cur,
+        shareCount: cur.shareCount + 1,
+        updatedAt: now(),
+      };
+      return upsert("SocialPosts", updated, {
+        Category: updated.category,
+        Status: updated.status,
+      });
+    },
+    async listSocialBlasts(filter: SocialBlastFilter = {}) {
+      return (await listAll<SocialBlast>("SocialBlasts"))
+        .filter((b) => (filter.status ? b.status === filter.status : true))
+        .sort((a, b) => a.scheduledFor.localeCompare(b.scheduledFor));
+    },
+    async getSocialBlast(id) {
+      return findOneByFormula<SocialBlast>("SocialBlasts", "RecordId", id);
+    },
+    async createSocialBlast(input: NewSocialBlast) {
+      const b: SocialBlast = { ...input, id: randomUUID(), createdAt: now(), updatedAt: now() };
+      return upsert("SocialBlasts", b, { Status: b.status });
+    },
+    async putSocialBlast(blast) {
+      return upsert("SocialBlasts", blast, { Status: blast.status });
     },
 
     async listTeamMembers(filter: TeamMemberFilter = {}) {

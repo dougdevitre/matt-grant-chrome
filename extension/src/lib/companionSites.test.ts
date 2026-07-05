@@ -45,9 +45,11 @@ describe("matchCompanion", () => {
     expect(matchCompanion("mail.google.com", S("contact.log"))?.id).toBe("gmail");
     expect(matchCompanion("calendar.google.com", S("events.write"))?.id).toBe("calendar");
     expect(matchCompanion("winred.com", S("finance.read"))?.id).toBe("winred");
+    // The social card is open to any signed-in role — everyone can amplify an
+    // approved post from the Share tab to their own channels.
     expect(matchCompanion("www.facebook.com", S("comms.draft"))?.id).toBe("social");
-    // Wrong scope → no card.
+    expect(matchCompanion("www.facebook.com", S("voter.read"))?.id).toBe("social");
+    // Wrong scope → no card (finance-gated).
     expect(matchCompanion("winred.com", S("voter.read"))).toBeNull();
-    expect(matchCompanion("www.facebook.com", S("voter.read"))).toBeNull();
   });
 });

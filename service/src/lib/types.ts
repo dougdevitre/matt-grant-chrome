@@ -238,7 +238,18 @@ export interface AuditEvent {
   ts: string;
   clerkId: string;
   action: string;
-  entity: "task" | "event" | "shift" | "template" | "send" | "optout" | "contact" | "followup" | "team";
+  entity:
+    | "task"
+    | "event"
+    | "shift"
+    | "template"
+    | "send"
+    | "optout"
+    | "contact"
+    | "followup"
+    | "team"
+    | "social_post"
+    | "social_blast";
   entityId: string;
   // Tamper-evident hash chain (filled by the store on append).
   seq?: number;
@@ -279,6 +290,99 @@ export interface OutboxEntry {
   status: OutboxStatus;
   reason: string | null;
   createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Social amplification — shareable posts + blasts (volunteers share to their
+// OWN channels; the app never posts on their behalf). No OAuth, no secrets: a
+// post carries copy + hashtags + an outbound link, and the extension opens the
+// platform's own composer (web share-intent) or copies to the clipboard.
+// ---------------------------------------------------------------------------
+
+// Platforms we build a share-intent / copy affordance for. "copy" is the
+// generic clipboard fallback (Instagram/Threads composers ignore prefilled text).
+export type SharePlatform = "x" | "facebook" | "linkedin" | "threads" | "copy";
+
+// A superset of TemplateCategory plus an evergreen "donate" (WinRed) theme.
+// Kept separate from TemplateCategory so the comms send pipeline's phase rules
+// are untouched.
+export type SocialCategory = "register" | "plan" | "turnout" | "donate";
+
+export interface SocialVariant {
+  platform: SharePlatform;
+  text: string;
+}
+
+// A ready-to-share post. Compliance mirrors MessageTemplate: a "Paid for by
+// <committee>" disclaimer is derived + required before a Compliance Clerk can
+// approve it. Social is not opt-out/consent gated (it's public speech).
+export interface SocialPost {
+  id: string;
+  blastId: string | null; // groups the post into a blast (optional)
+  category: SocialCategory;
+  phases: Phase[]; // when the post is "relevant" (donate = all active phases)
+  title: string; // internal label for the library
+  variants: SocialVariant[]; // platform-tailored copy
+  hashtags: string[];
+  linkUrl: string | null; // register / vote / WinRed donate link
+  disclaimer: string | null; // "Paid for by …" attribution line
+  hasDisclaimer: boolean; // derived, like MessageTemplate
+  status: "draft" | "approved";
+  complianceApprovalId: string | null; // set by a Compliance Clerk on approval
+  createdBy: string;
+  shareCount: number; // self-reported amplifications
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type BlastStatus = "scheduled" | "active" | "done";
+
+// A coordinated wave of posts tied to the phase clock. `goal` is a target total
+// share count for the dashboard's progress bar.
+export interface SocialBlast {
+  id: string;
+  title: string;
+  theme: string;
+  phases: Phase[];
+  scheduledFor: string; // ISO — when the blast goes live
+  goal: number;
+  status: BlastStatus;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Media/amplification dashboard aggregate (counts only — mirrors GotvDashboard).
+export interface SocialBlastProgress {
+  blastId: string;
+  title: string;
+  theme: string;
+  status: BlastStatus;
+  scheduledFor: string;
+  goal: number;
+  shares: number;
+  posts: number;
+}
+
+export interface SocialPlatformRow {
+  platform: SharePlatform;
+  posts: number; // posts offering this platform variant
+}
+
+export interface SocialTopPost {
+  id: string;
+  title: string;
+  category: SocialCategory;
+  shares: number;
+}
+
+export interface SocialDashboard {
+  activeBlast: SocialBlastProgress | null;
+  totalShares: number;
+  totalPosts: number; // approved posts
+  byBlast: SocialBlastProgress[];
+  byPlatform: SocialPlatformRow[];
+  topPosts: SocialTopPost[];
 }
 
 // ---------------------------------------------------------------------------

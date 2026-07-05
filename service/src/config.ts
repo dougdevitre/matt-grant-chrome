@@ -45,6 +45,13 @@ export const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? "*";
 // registration before launch — a wrong name here is a compliance defect.
 export const COMMITTEE_NAME = process.env.COMMITTEE_NAME ?? "Matt Grant for Congress";
 
+// WinRed contribute page used as the donate link on shareable "donate" posts.
+// NOT a payment integration or secret — just an outbound URL volunteers share to
+// their own channels. VERIFY the real committee WinRed slug before launch; a
+// wrong link routes donations to the wrong place. Override with DONATE_URL.
+export const DONATE_URL =
+  process.env.DONATE_URL ?? "https://secure.winred.com/matt-grant-for-congress/donate";
+
 /**
  * Whether to enforce the hardened production behavior (boot gate, no dev auth,
  * HSTS, …). We fail SAFE: the relaxed local mode is *opt-in* via an explicit
