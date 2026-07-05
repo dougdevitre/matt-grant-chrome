@@ -50,7 +50,7 @@ export const COMMITTEE_NAME = process.env.COMMITTEE_NAME ?? "Matt Grant for Cong
 // their own channels. VERIFY the real committee WinRed slug before launch; a
 // wrong link routes donations to the wrong place. Override with DONATE_URL.
 export const DONATE_URL =
-  process.env.DONATE_URL ?? "https://secure.winred.com/matt-grant-for-congress/donate";
+  process.env.DONATE_URL ?? "https://secure.winred.com/matt-grant-for-congress/donate-today";
 
 /**
  * Whether to enforce the hardened production behavior (boot gate, no dev auth,

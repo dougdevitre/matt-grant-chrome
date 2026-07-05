@@ -166,10 +166,10 @@ store self-seeds; Airtable does not). Create those two tables first
 
 ```bash
 aws ssm put-parameter --region us-east-1 --type String --overwrite \
-  --name /matt-grant-chrome/prod/DONATE_URL --value 'https://secure.winred.com/<real-slug>'
+  --name /matt-grant-chrome/prod/DONATE_URL --value 'https://secure.winred.com/matt-grant-for-congress/donate-today'
 
 STORE_DRIVER=airtable AIRTABLE_PAT=<pat> AIRTABLE_BASE_ID=appkOfv2eLaDMAjPu \
-  CONTACT_KEY_SALT=<salt> DONATE_URL='https://secure.winred.com/<real-slug>' \
+  CONTACT_KEY_SALT=<salt> DONATE_URL='https://secure.winred.com/matt-grant-for-congress/donate-today' \
   npm run seed:social
 ```
 
