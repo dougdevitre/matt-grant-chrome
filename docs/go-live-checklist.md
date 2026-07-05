@@ -157,6 +157,31 @@ development — but it must pass before GOTV.
 
 ---
 
+## 4.75 Seed the social library (Share tab)
+
+The **Share** tab and `/dashboard/social` read from the `SocialPosts` /
+`SocialBlasts` Airtable tables, which start **empty** in production (the memory
+store self-seeds; Airtable does not). Create those two tables first
+(`docs/airtable-setup.md`), then set the donate link and run the one-time seed:
+
+```bash
+aws ssm put-parameter --region us-east-1 --type String --overwrite \
+  --name /matt-grant-chrome/prod/DONATE_URL --value 'https://secure.winred.com/<real-slug>'
+
+STORE_DRIVER=airtable AIRTABLE_PAT=<pat> AIRTABLE_BASE_ID=appkOfv2eLaDMAjPu \
+  CONTACT_KEY_SALT=<salt> DONATE_URL='https://secure.winred.com/<real-slug>' \
+  npm run seed:social
+```
+
+`seed:social` is **idempotent** (skips if posts already exist; `--force` to
+reseed). After it runs, a Social & Comms Clerk can generate/draft more posts and
+a Compliance Clerk approves them from the panel.
+
+✅ **Gate:** sign in, open **Share**, confirm the seeded posts render and the
+donate post points at the real WinRed URL; `POST` a share and watch
+`/dashboard/social` count move. **Verify the WinRed slug** — a wrong `DONATE_URL`
+routes donations to the wrong place.
+
 ## 5. Publish the extension (optional)
 
 For one-click install + auto-update across the volunteer team, submit to the

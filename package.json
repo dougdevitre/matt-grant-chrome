@@ -15,6 +15,7 @@
     "build:download": "npm run build:extension && node service/scripts/pack-extension.mjs",
     "typecheck": "npm run typecheck --workspace service && npm run typecheck --workspace extension",
     "build": "npm run build:service && npm run build:extension",
+    "seed:social": "npm run build:service && node scripts/seed-social.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },
