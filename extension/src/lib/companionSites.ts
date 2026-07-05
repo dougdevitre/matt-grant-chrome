@@ -102,9 +102,9 @@ export const COMPANION_SITES: CompanionSite[] = [
   {
     id: "social",
     hostSuffixes: ["x.com", "twitter.com", "facebook.com", "instagram.com", "youtube.com"],
-    anyScopes: ["comms.draft"],
+    anyScopes: null,
     title: "Posting on social",
-    body: "Pull an approved template from the Comms tab. Post only compliant, approved messages.",
+    body: "Open the Share tab to grab this week's approved post — copy the text + hashtags, share it here, then mark it shared. Post only approved, compliant copy.",
     actions: [],
   },
   // Voter-file companion (VAN/PDI/L2/GOP Data Center/i360) is intentionally

@@ -5,6 +5,7 @@
 import { randomUUID } from "node:crypto";
 import { contactKeyFor } from "./keys.js";
 import { computeAuditHash } from "./auditChain.js";
+import { COMMITTEE_NAME, DONATE_URL } from "../config.js";
 import type {
   StorePort,
   NewTask,
@@ -18,6 +19,10 @@ import type {
   FollowUpFilter,
   NewTeamMember,
   TeamMemberFilter,
+  NewSocialPost,
+  SocialPostFilter,
+  NewSocialBlast,
+  SocialBlastFilter,
 } from "./store.js";
 import type {
   AuditEvent,
@@ -29,6 +34,8 @@ import type {
   OutboxEntry,
   Phase,
   Shift,
+  SocialBlast,
+  SocialPost,
   Task,
   TeamMember,
 } from "./types.js";
@@ -48,6 +55,8 @@ export function makeMemoryStore(): StorePort {
   const contactsByKey = new Map<string, string>(); // contactKey -> contactId
   const contactLogs: ContactLog[] = [];
   const followUps = new Map<string, FollowUp>();
+  const socialPosts = new Map<string, SocialPost>();
+  const socialBlasts = new Map<string, SocialBlast>();
   const teamMembers = new Map<string, TeamMember>();
   const auditLog: AuditEvent[] = [];
   let lastAuditHash: string | null = null;
@@ -234,6 +243,67 @@ export function makeMemoryStore(): StorePort {
     async putFollowUp(followUp) {
       followUps.set(followUp.id, followUp);
       return followUp;
+    },
+
+    async listSocialPosts(filter: SocialPostFilter = {}) {
+      return [...socialPosts.values()]
+        .filter((p) => {
+          if (filter.status && p.status !== filter.status) return false;
+          if (filter.blastId && p.blastId !== filter.blastId) return false;
+          if (filter.category && p.category !== filter.category) return false;
+          if (filter.phase && !p.phases.includes(filter.phase)) return false;
+          return true;
+        })
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    },
+    async getSocialPost(id) {
+      return socialPosts.get(id);
+    },
+    async createSocialPost(input: NewSocialPost) {
+      const p: SocialPost = {
+        ...input,
+        id: randomUUID(),
+        complianceApprovalId: null,
+        shareCount: 0,
+        createdAt: now(),
+        updatedAt: now(),
+      };
+      socialPosts.set(p.id, p);
+      return p;
+    },
+    async putSocialPost(post) {
+      socialPosts.set(post.id, post);
+      return post;
+    },
+    async incrementShareCount(id) {
+      // Synchronous read+write (no await between) is atomic on the single event
+      // loop, so concurrent shares can't lose a count.
+      const cur = socialPosts.get(id);
+      if (!cur) return null;
+      const updated: SocialPost = {
+        ...cur,
+        shareCount: cur.shareCount + 1,
+        updatedAt: now(),
+      };
+      socialPosts.set(id, updated);
+      return updated;
+    },
+    async listSocialBlasts(filter: SocialBlastFilter = {}) {
+      return [...socialBlasts.values()]
+        .filter((b) => (filter.status ? b.status === filter.status : true))
+        .sort((a, b) => a.scheduledFor.localeCompare(b.scheduledFor));
+    },
+    async getSocialBlast(id) {
+      return socialBlasts.get(id);
+    },
+    async createSocialBlast(input: NewSocialBlast) {
+      const b: SocialBlast = { ...input, id: randomUUID(), createdAt: now(), updatedAt: now() };
+      socialBlasts.set(b.id, b);
+      return b;
+    },
+    async putSocialBlast(blast) {
+      socialBlasts.set(blast.id, blast);
+      return blast;
     },
 
     async listTeamMembers(filter: TeamMemberFilter = {}) {
@@ -446,6 +516,105 @@ async function seed(store: StorePort): Promise<void> {
         "Congress. Reply STOP to opt out.",
       hasDisclaimer: true,
       hasOptOut: true,
+      createdBy: "seed",
+    });
+
+    // --- Social amplification: a couple of blasts + approved, ready-to-share
+    // posts so the Share tab and media dashboard are non-empty out of the box.
+    const disclaimer = `Paid for by ${COMMITTEE_NAME}.`;
+    const REG_LINK = "https://www.sos.mo.gov/elections/goVoteMissouri/register";
+
+    // Helper: create then approve (seed posts are shareable immediately).
+    const seedPost = async (
+      input: Parameters<StorePort["createSocialPost"]>[0]
+    ): Promise<void> => {
+      const p = await store.createSocialPost(input);
+      await store.putSocialPost({
+        ...p,
+        status: "approved",
+        complianceApprovalId: "seed_approved",
+      });
+    };
+
+    const registerBlast = await store.createSocialBlast({
+      title: "Register by Jul 8",
+      theme: "Registration deadline urgency (no same-day registration in MO).",
+      phases: ["PHASE_1_REGISTER"],
+      scheduledFor: "2026-07-01T09:00:00-05:00",
+      goal: 150,
+      status: "active",
+      createdBy: "seed",
+    });
+    const donateBlast = await store.createSocialBlast({
+      title: "Chip in for MO-02",
+      theme: "Evergreen grassroots fundraising ask (WinRed).",
+      phases: ALL_PHASES,
+      scheduledFor: "2026-07-01T09:00:00-05:00",
+      goal: 200,
+      status: "active",
+      createdBy: "seed",
+    });
+
+    await seedPost({
+      blastId: registerBlast.id,
+      category: "register",
+      phases: ["PHASE_1_REGISTER"],
+      title: "Register deadline — Jul 8",
+      variants: [
+        {
+          platform: "x",
+          text: "Missouri's voter registration deadline for the Aug 4 primary is Jul 8 — no same-day registration. Register today and back Matt Grant for Congress in MO-02.",
+        },
+        {
+          platform: "facebook",
+          text: "The deadline to register for Missouri's Aug 4 primary is July 8 — and there's no same-day registration. Take two minutes now so you can vote for Matt Grant in MO-02. Share this with a friend who hasn't registered yet!",
+        },
+      ],
+      hashtags: ["#MO02", "#MattGrant", "#RegisterToVote", "#MissouriPrimary"],
+      linkUrl: REG_LINK,
+      disclaimer,
+      hasDisclaimer: true,
+      status: "draft",
+      createdBy: "seed",
+    });
+    await seedPost({
+      blastId: donateBlast.id,
+      category: "donate",
+      phases: ALL_PHASES,
+      title: "Chip in — grassroots ask",
+      variants: [
+        {
+          platform: "x",
+          text: "Grassroots donors — not DC insiders — power this campaign. Chip in $10 to help send Matt Grant to Congress for MO-02.",
+        },
+        {
+          platform: "facebook",
+          text: "This campaign runs on grassroots support from neighbors like you, not DC special interests. Can you chip in $10 today to help Matt Grant win MO-02? Every dollar goes straight to reaching voters before Aug 4.",
+        },
+      ],
+      hashtags: ["#MO02", "#MattGrant", "#Grassroots"],
+      linkUrl: DONATE_URL,
+      disclaimer,
+      hasDisclaimer: true,
+      status: "draft",
+      createdBy: "seed",
+    });
+    await seedPost({
+      blastId: null,
+      category: "turnout",
+      phases: ["PHASE_3_TURNOUT"],
+      title: "Aug 4 — polls open",
+      variants: [
+        {
+          platform: "x",
+          text: "Today's the day, MO-02! Polls are open until 7pm. Bring a photo ID and vote for Matt Grant for Congress in the Aug 4 primary.",
+        },
+      ],
+      hashtags: ["#MO02", "#MattGrant", "#VoteAug4"],
+      linkUrl: "https://www.sos.mo.gov/elections/goVoteMissouri/findyourpollingplace",
+      disclaimer,
+      hasDisclaimer: true,
+      status: "draft",
       createdBy: "seed",
     });
   }

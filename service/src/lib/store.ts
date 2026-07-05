@@ -13,6 +13,9 @@ import type {
   OutboxEntry,
   RegStatus,
   Shift,
+  SocialBlast,
+  SocialCategory,
+  SocialPost,
   Task,
   TeamMember,
   VoteStatus,
@@ -50,6 +53,24 @@ export interface TeamMemberFilter {
 }
 
 export type NewFollowUp = Omit<FollowUp, "id" | "status" | "createdAt" | "updatedAt">;
+
+export type NewSocialPost = Omit<
+  SocialPost,
+  "id" | "complianceApprovalId" | "shareCount" | "createdAt" | "updatedAt"
+>;
+export type NewSocialBlast = Omit<SocialBlast, "id" | "createdAt" | "updatedAt">;
+
+export interface SocialPostFilter {
+  status?: SocialPost["status"] | null;
+  blastId?: string | null;
+  category?: SocialCategory | null;
+  /** Keep only posts relevant to this phase (post.phases includes it). */
+  phase?: SocialPost["phases"][number] | null;
+}
+
+export interface SocialBlastFilter {
+  status?: SocialBlast["status"] | null;
+}
 
 export interface FollowUpFilter {
   status?: FollowUp["status"] | null;
@@ -105,6 +126,17 @@ export interface StorePort {
   listFollowUps(filter?: FollowUpFilter): Promise<FollowUp[]>;
   getFollowUp(id: string): Promise<FollowUp | undefined>;
   putFollowUp(followUp: FollowUp): Promise<FollowUp>;
+  // social posts + blasts (amplification)
+  listSocialPosts(filter?: SocialPostFilter): Promise<SocialPost[]>;
+  getSocialPost(id: string): Promise<SocialPost | undefined>;
+  createSocialPost(input: NewSocialPost): Promise<SocialPost>;
+  putSocialPost(post: SocialPost): Promise<SocialPost>;
+  /** Atomic-ish +1 to shareCount; returns the new post, or null if not found. */
+  incrementShareCount(id: string): Promise<SocialPost | null>;
+  listSocialBlasts(filter?: SocialBlastFilter): Promise<SocialBlast[]>;
+  getSocialBlast(id: string): Promise<SocialBlast | undefined>;
+  createSocialBlast(input: NewSocialBlast): Promise<SocialBlast>;
+  putSocialBlast(blast: SocialBlast): Promise<SocialBlast>;
   // team roster
   listTeamMembers(filter?: TeamMemberFilter): Promise<TeamMember[]>;
   getTeamMember(id: string): Promise<TeamMember | undefined>;

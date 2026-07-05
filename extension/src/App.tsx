@@ -25,11 +25,12 @@ import { TaskQueue } from "./components/TaskQueue.js";
 import { Scheduler } from "./components/Scheduler.js";
 import { ImportPanel } from "./components/ImportPanel.js";
 import { CommsPanel } from "./components/CommsPanel.js";
+import { SharePanel } from "./components/SharePanel.js";
 import { TurnoutPanel } from "./components/TurnoutPanel.js";
 import { TeamPanel } from "./components/TeamPanel.js";
 import { SignIn } from "./components/SignIn.js";
 
-type Tab = "local" | "tasks" | "schedule" | "import" | "comms" | "turnout" | "team";
+type Tab = "local" | "tasks" | "schedule" | "import" | "comms" | "share" | "turnout" | "team";
 
 export default function App() {
   const [me, setMe] = useState<ClerkIdentity | null>(null);
@@ -166,6 +167,8 @@ export default function App() {
     { id: "local", label: "Local" },
     { id: "tasks", label: "Tasks" },
     { id: "schedule", label: "Schedule" },
+    // Every signed-in clerk can amplify to their own channels.
+    { id: "share", label: "Share" },
     ...(canManageTeam ? [{ id: "team" as Tab, label: "Team" }] : []),
     ...(canRead ? [{ id: "turnout" as Tab, label: "Turnout" }] : []),
     ...(canImport ? [{ id: "import" as Tab, label: "Import" }] : []),
@@ -312,6 +315,9 @@ export default function App() {
       {activeTab === "tasks" && me ? <TaskQueue me={me} zip={zip} /> : null}
       {activeTab === "schedule" && me ? (
         <Scheduler me={me} county={county} zip={zip} />
+      ) : null}
+      {activeTab === "share" && me ? (
+        <SharePanel me={me} phase={phase?.phase ?? null} />
       ) : null}
       {activeTab === "turnout" ? <TurnoutPanel /> : null}
       {activeTab === "team" && me ? <TeamPanel me={me} /> : null}

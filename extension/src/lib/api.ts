@@ -20,6 +20,10 @@ import type {
   ReverseGeocoded,
   Role,
   Shift,
+  SocialBlast,
+  SocialDashboard,
+  SocialPost,
+  GeneratedPost,
   Task,
   TeamMember,
   VolunteerWork,
@@ -288,6 +292,73 @@ export const api = {
       body: JSON.stringify({ templateId, recipient, idempotencyKey }),
       headers: stepUpToken ? { "X-StepUp-Token": stepUpToken } : {},
     }),
+
+  // Social amplification: shareable posts + blasts
+  socialPosts: (opts?: {
+    phase?: string | null;
+    blastId?: string | null;
+    category?: string | null;
+    status?: "approved" | "draft" | "all";
+  }) => {
+    const qs = new URLSearchParams();
+    if (opts?.phase) qs.set("phase", opts.phase);
+    if (opts?.blastId) qs.set("blastId", opts.blastId);
+    if (opts?.category) qs.set("category", opts.category);
+    if (opts?.status) qs.set("status", opts.status);
+    const s = qs.toString() ? `?${qs.toString()}` : "";
+    return call<SocialPost[]>(`/social/posts${s}`);
+  },
+  generatePost: (category: string, blastId?: string | null) =>
+    call<GeneratedPost>("/social/generate", {
+      method: "POST",
+      body: JSON.stringify({ category, blastId: blastId ?? null }),
+    }),
+  createSocialPost: (input: {
+    category: string;
+    title: string;
+    variants: { platform: string; text: string }[];
+    hashtags?: string[];
+    linkUrl?: string | null;
+    disclaimer?: string | null;
+    phases?: string[];
+    blastId?: string | null;
+  }) =>
+    call<SocialPost>("/social/posts", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  approveSocialPost: (id: string, approve: boolean) =>
+    call<SocialPost>(`/social/posts/${id}/approve`, {
+      method: "POST",
+      body: JSON.stringify({ approve }),
+    }),
+  markShared: (id: string, platform?: string) =>
+    call<{ status: string; shareCount: number }>(`/social/posts/${id}/shared`, {
+      method: "POST",
+      body: JSON.stringify(platform ? { platform } : {}),
+    }),
+  socialBlasts: (status?: string | null) =>
+    call<SocialBlast[]>(
+      `/social/blasts${status ? `?status=${encodeURIComponent(status)}` : ""}`
+    ),
+  createBlast: (input: {
+    title: string;
+    theme?: string;
+    scheduledFor: string;
+    phases?: string[];
+    goal?: number;
+    status?: string;
+  }) =>
+    call<SocialBlast>("/social/blasts", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  setBlastStatus: (id: string, status: string) =>
+    call<SocialBlast>(`/social/blasts/${id}/status`, {
+      method: "POST",
+      body: JSON.stringify({ status }),
+    }),
+  socialDashboard: () => call<SocialDashboard>("/dashboard/social"),
 };
 
 // --- Auth: exchange a credential for a scoped token (stored in chrome.storage) ---

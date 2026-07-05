@@ -31,7 +31,7 @@ matt-grant-chrome/
 │   └── src/
 │       ├── lib/        # rbac (UX gating), phase (display), api client, types
 │       ├── components/ # Countdown, LocationForm, ResourceCards, TaskQueue,
-│       │               #   Scheduler, ImportPanel, CommsPanel, SignIn, RolePanel
+│       │               #   Scheduler, ImportPanel, CommsPanel, SharePanel, SignIn, RolePanel
 │       ├── background/ # service worker (token + phase + API proxy)
 │       └── App.tsx
 └── service/            # Backend microservice (Node + Express + TypeScript)
@@ -107,6 +107,15 @@ All require a valid clerk JWT. Scope and phase are re-checked server-side on eve
 | POST | `/contacts/:id/logs` | `contact.log` | log a disposition (registered/opted_out reflect onto the contact) |
 | POST | `/contacts/:id/optout` | `optout.manage` | opt a contact out (sets flag + adds opaque key to opt-out list) |
 | POST | `/comms/send-to-contact` | `comms.send` | gated send to a stored contact; register sends flip them to `reg_link_sent` |
+| GET | `/social/posts?phase=&blastId=&category=&status=` | any clerk (approved); `comms.draft`/`comms.approve` see drafts | shareable post library (phase-relevant) |
+| POST | `/social/generate` | `comms.draft` | generate an unsaved post (text + hashtags) from campaign facts |
+| POST | `/social/posts` | `comms.draft` | save a shareable post draft (disclaimer auto-detected) |
+| POST | `/social/posts/:id/approve` | `comms.approve` | approve/reject; blocked if disclaimer missing |
+| POST | `/social/posts/:id/shared` | any clerk | self-report a share to your own channel (audited) |
+| GET | `/social/blasts?status=` | any clerk | list amplification blasts |
+| POST | `/social/blasts` | `comms.draft` | schedule a blast |
+| POST | `/social/blasts/:id/status` | `comms.approve` | advance a blast `scheduled→active→done` |
+| GET | `/dashboard/social` | any clerk | amplification dashboard: shares, blasts, platforms (counts only) |
 
 **Task lifecycle:** `open → claimed → in_progress → done | skipped`. Registration-kind tasks can only be **completed** during `PHASE_1_REGISTER`; after Jul 8 the server rejects completion with `409 phase_closed`, even for a task claimed earlier.
 
@@ -151,6 +160,7 @@ The no-op calendar/mailer log to console and the audit trail so the loops are ob
 
 v0.6 scaffold. **Live and smoke-tested:**
 - **Extension UI** — the side panel now has scope-gated tabs: Local, Tasks, Schedule, plus **Import** (List Clerk: paste/upload CSV → preview counts → commit, with a contacts list) and **Comms** (Compliance: review + approve/reject; Social: draft + send approved templates). A real **sign-in** screen replaces the manual token paste. Each tab only renders if the clerk's scopes allow it.
+- **Share (social amplification)** — a **Share** tab every clerk sees: a media dashboard (blast progress vs. goal, total shares) plus a library of approved, phase-relevant posts. Volunteers **copy text + hashtags** or open a platform composer via web share-intent and post to **their own channels**, then mark it shared. A Social & Comms Clerk **generates** post copy (template-based, from candidate/phase/links/committee) and drafts it; a Compliance Clerk approves it (disclaimer required). Includes an evergreen **WinRed donate** theme (`DONATE_URL`; link-out only, no payment integration). Details in **[`docs/social-blasts.md`](docs/social-blasts.md)**.
 - **Auth** — `POST /auth/token` (dev + clerk drivers) → short-lived scoped JWT.
 - **Contacts layer** — CSV import (preview/commit), dedupe, geocoded in-district flag, dispositions, opt-out; register sends flip a contact to `reg_link_sent`.
 - **Phase 1 — Storage:** async `StorePort`, `memory` (seeded) + `airtable` adapters.

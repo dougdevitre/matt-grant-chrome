@@ -230,6 +230,93 @@ export interface MessageTemplate {
   updatedAt: string;
 }
 
+// --- Social amplification (UI) ---
+
+export type SharePlatform = "x" | "facebook" | "linkedin" | "threads" | "copy";
+export type SocialCategory = "register" | "plan" | "turnout" | "donate";
+export type BlastStatus = "scheduled" | "active" | "done";
+
+export interface SocialVariant {
+  platform: SharePlatform;
+  text: string;
+}
+
+export interface SocialPost {
+  id: string;
+  blastId: string | null;
+  category: SocialCategory;
+  phases: Phase[];
+  title: string;
+  variants: SocialVariant[];
+  hashtags: string[];
+  linkUrl: string | null;
+  disclaimer: string | null;
+  hasDisclaimer: boolean;
+  status: "draft" | "approved";
+  complianceApprovalId: string | null;
+  createdBy: string;
+  shareCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SocialBlast {
+  id: string;
+  title: string;
+  theme: string;
+  phases: Phase[];
+  scheduledFor: string;
+  goal: number;
+  status: BlastStatus;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Unsaved suggestion returned by POST /social/generate.
+export interface GeneratedPost {
+  category: SocialCategory;
+  phases: Phase[];
+  title: string;
+  variants: SocialVariant[];
+  hashtags: string[];
+  linkUrl: string;
+  disclaimer: string;
+  blastId: string | null;
+}
+
+export interface SocialBlastProgress {
+  blastId: string;
+  title: string;
+  theme: string;
+  status: BlastStatus;
+  scheduledFor: string;
+  goal: number;
+  shares: number;
+  posts: number;
+}
+
+export interface SocialPlatformRow {
+  platform: SharePlatform;
+  posts: number;
+}
+
+export interface SocialTopPost {
+  id: string;
+  title: string;
+  category: SocialCategory;
+  shares: number;
+}
+
+export interface SocialDashboard {
+  activeBlast: SocialBlastProgress | null;
+  totalShares: number;
+  totalPosts: number;
+  byBlast: SocialBlastProgress[];
+  byPlatform: SocialPlatformRow[];
+  topPosts: SocialTopPost[];
+}
+
 // --- Contacts (UI) ---
 
 export type RegStatus = "unknown" | "unregistered" | "reg_link_sent" | "registered";

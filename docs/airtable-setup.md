@@ -31,11 +31,16 @@ are for human-readable filtering in the Airtable UI.
 | `Audit`        | `Action`, `Seq` (number) **(read)**, `Hash`                |
 | `FollowUps`    | `RecordId` **(read)**, `ContactId`, `Status`               |
 | `TeamMembers`  | `RecordId` **(read)**, `ClerkId` **(read)**, `CaptainClerkId` |
+| `SocialPosts`  | `RecordId` **(read)**, `Category`, `Status`                |
+| `SocialBlasts` | `RecordId` **(read)**, `Status`                            |
 
 Notes:
 - `RecordId` holds our own UUID (not Airtable's `rec…` id); the adapter upserts by matching it.
 - `ContactKey` is the opaque, non-reversible recipient key (no raw PII is stored).
 - `IdempotencyKey` makes the outbox replay check a point read, preserving send idempotency.
+- `SocialPosts` / `SocialBlasts` back the **Share** tab and `/dashboard/social` (shareable
+  posts + amplification blasts). Without these tables, `/social/*` endpoints 500 under
+  `STORE_DRIVER=airtable`.
 - `FollowUps` backs the GOTV reminder feature (`/followups`, `POST /contacts/:id/followups`, and the
   Turnout tab's reminders list). Without this table, those endpoints 500 under `STORE_DRIVER=airtable`.
 - `TeamMembers` is the volunteer roster that powers the **Team** tab for `team_captain` users:
