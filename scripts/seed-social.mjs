@@ -13,7 +13,7 @@
 // repo root:
 //
 //   STORE_DRIVER=airtable AIRTABLE_PAT=<pat> AIRTABLE_BASE_ID=appkOfv2eLaDMAjPu \
-//   CONTACT_KEY_SALT=<salt> DONATE_URL=https://secure.winred.com/<slug> \
+//   CONTACT_KEY_SALT=<salt> DONATE_URL=https://secure.winred.com/matt-grant-for-congress/donate-today \
 //     npm run seed:social
 //
 // (In SSM-backed deploys, export the same values as env for this one run, or set
