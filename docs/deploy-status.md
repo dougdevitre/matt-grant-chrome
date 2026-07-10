@@ -12,12 +12,20 @@ reference and `docs/clerk-setup.md` / `docs/airtable-setup.md` for provider deta
 ## ✅ Done
 
 - **App code** — fully merged to `main`, CI green (tests + typecheck + build + docker-build + audit).
-- **Airtable storage base** — created with all 9 required tables (`Tasks`, `Events`, `Shifts`,
-  `Templates`, `Contacts`, `ContactLogs`, `OptOut`, `Outbox`, `Audit`), each with the
-  `Data` blob + the filter columns the adapter needs. **Base id: `appkOfv2eLaDMAjPu`**
+- **Airtable storage base** — created with all **13** required tables (`Tasks`, `Events`, `Shifts`,
+  `Templates`, `Contacts`, `ContactLogs`, `OptOut`, `Outbox`, `Audit`, `FollowUps`, `TeamMembers`,
+  `SocialPosts`, `SocialBlasts`), each with the `Data` blob + the filter columns the adapter needs
+  (full column list in `docs/airtable-setup.md`). **Base id: `appkOfv2eLaDMAjPu`**
   ("Matt Grant for Congress - Clerk Tool Storage").
+  > **2026-07-10 fix:** the base originally had only the first 10 — `TeamMembers`, `SocialPosts`,
+  > and `SocialBlasts` shipped in code *after* the base was created, so the Team tab and Share tab
+  > 500'd in production until the three tables were added on 2026-07-10. When a future feature adds
+  > a store table, add it to the live base as part of the rollout, not after.
 - **AWS Parameter Store** (`/matt-grant-chrome/prod`, **us-east-1**) holds:
-  `JWT_SECRET`, `CLERK_ISSUER`, `CLERK_JWKS_URL`, `AIRTABLE_BASE_ID`. (SecureString for secrets.)
+  `JWT_SECRET`, `CONTACT_KEY_SALT`, `AIRTABLE_PAT`, `CLERK_ISSUER`, `CLERK_JWKS_URL`,
+  `AIRTABLE_BASE_ID`. (SecureString for secrets. The boot gate requires all of
+  `JWT_SECRET`/`CONTACT_KEY_SALT`/`AIRTABLE_PAT` in production with `STORE_DRIVER=airtable` —
+  a rebuild that skips any of them refuses to start.)
 - **IAM instance role** — `matt-grant-apprunner-instance`, trusted by
   `tasks.apprunner.amazonaws.com`, granting `ssm:GetParameter*` on
   `/matt-grant-chrome/prod/*` + `kms:Decrypt`.

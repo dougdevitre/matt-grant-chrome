@@ -1,18 +1,27 @@
 import { useEffect } from "react";
 import type { ReactNode } from "react";
-import { ClerkProvider, useClerk } from "@clerk/chrome-extension";
-import { PUBLISHABLE_KEY, clerkEnabled } from "./clerkConfig.js";
-import { registerClerkSignOut } from "./clerkSession.js";
+import { ClerkProvider, useAuth, useClerk } from "@clerk/chrome-extension";
+import { JWT_TEMPLATE, PUBLISHABLE_KEY, clerkEnabled } from "./clerkConfig.js";
+import { registerClerkGetToken, registerClerkSignOut } from "./clerkSession.js";
 
-// Exposes Clerk's signOut to non-hook code (App's sign-out handler) so signing
+// Exposes Clerk's signOut and getToken to non-hook code. signOut: so signing
 // out of the app also ends the Clerk session — otherwise the bridge would just
-// auto-exchange a fresh token on the next render.
+// auto-exchange a fresh token on the next render. getToken: so the SMS step-up
+// can mint a FRESH session token at send time (Clerk session JWTs expire in
+// ~60s; the one snapshotted at sign-in is long dead by the first send).
 function SignOutBridge() {
   const { signOut } = useClerk();
+  const { getToken } = useAuth();
   useEffect(() => {
     registerClerkSignOut(() => signOut());
-    return () => registerClerkSignOut(null);
-  }, [signOut]);
+    registerClerkGetToken(() =>
+      getToken(JWT_TEMPLATE ? { template: JWT_TEMPLATE } : undefined)
+    );
+    return () => {
+      registerClerkSignOut(null);
+      registerClerkGetToken(null);
+    };
+  }, [signOut, getToken]);
   return null;
 }
 

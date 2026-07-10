@@ -5,7 +5,7 @@
 // everyone can amplify. Mirrors routes/comms.ts conventions.
 
 import { Router } from "express";
-import { requireScope } from "../auth.js";
+import { requirePhaseWritable, requireScope } from "../auth.js";
 import {
   approveSocialPost,
   createBlast,
@@ -108,7 +108,7 @@ socialRouter.post("/generate", requireScope("comms.draft"), async (req, res) => 
 });
 
 // POST /social/posts — save a draft (Social & Comms Clerk).
-socialRouter.post("/posts", requireScope("comms.draft"), async (req, res) => {
+socialRouter.post("/posts", requireScope("comms.draft"), requirePhaseWritable, async (req, res) => {
   const b = req.body ?? {};
   const variants = parseVariants(b.variants);
   if (!isCategory(b.category) || !b.title || !variants) {
@@ -136,7 +136,7 @@ socialRouter.post("/posts", requireScope("comms.draft"), async (req, res) => {
 });
 
 // POST /social/posts/:id/approve  { approve?: boolean }
-socialRouter.post("/posts/:id/approve", requireScope("comms.approve"), async (req, res) => {
+socialRouter.post("/posts/:id/approve", requireScope("comms.approve"), requirePhaseWritable, async (req, res) => {
   const approve = req.body?.approve !== false; // default true
   const result = await approveSocialPost(pathParam(req, "id"), approve, req.clerk!.clerkId);
   if (result.ok) {
@@ -146,11 +146,13 @@ socialRouter.post("/posts/:id/approve", requireScope("comms.approve"), async (re
   res.status(result.code === "not_found" ? 404 : 409).json({ error: result.code });
 });
 
-// POST /social/posts/:id/shared  { platform? } — any signed-in clerk amplifies.
+// POST /social/posts/:id/shared  { platform? } — any clerk amplifies (task.read
+// is the baseline every clerk role carries; the voter-facing `public` role
+// cannot self-report shares and inflate the dashboard).
 // Per-clerk rate limit (mirrors the SMS send limit): shares are self-reported
 // and feed the dashboard totals, so one clerk hammering the endpoint must not
 // be able to inflate blast progress.
-socialRouter.post("/posts/:id/shared", async (req, res) => {
+socialRouter.post("/posts/:id/shared", requireScope("task.read"), requirePhaseWritable, async (req, res) => {
   if (!(await rateAllow(`social_share:${req.clerk!.clerkId}`, 30, 60_000))) {
     res.status(429).json({ error: "rate_limited" });
     return;
@@ -184,17 +186,24 @@ socialRouter.get("/blasts", async (req, res) => {
 });
 
 // POST /social/blasts — schedule a blast (Social & Comms Clerk).
-socialRouter.post("/blasts", requireScope("comms.draft"), async (req, res) => {
+socialRouter.post("/blasts", requireScope("comms.draft"), requirePhaseWritable, async (req, res) => {
   const b = req.body ?? {};
   if (!b.title || !b.scheduledFor) {
     res.status(400).json({ error: "missing_fields" });
+    return;
+  }
+  // listSocialBlasts sorts by scheduledFor — an unparseable date would corrupt
+  // the calendar ordering, so reject it like the followups route does.
+  if (Number.isNaN(Date.parse(String(b.scheduledFor)))) {
+    res.status(400).json({ error: "invalid_date" });
     return;
   }
   const phases = Array.isArray(b.phases)
     ? (b.phases.filter((p: unknown) => PHASES.includes(p as Phase)) as Phase[])
     : [];
   const status: BlastStatus = BLAST_STATUSES.includes(b.status) ? b.status : "scheduled";
-  const goal = typeof b.goal === "number" && b.goal > 0 ? Math.floor(b.goal) : 0;
+  const goal =
+    typeof b.goal === "number" && Number.isFinite(b.goal) && b.goal > 0 ? Math.floor(b.goal) : 0;
   const blast = await createBlast(
     {
       title: String(b.title).slice(0, 200),
@@ -211,7 +220,7 @@ socialRouter.post("/blasts", requireScope("comms.draft"), async (req, res) => {
 });
 
 // POST /social/blasts/:id/status  { status } — advance scheduled→active→done.
-socialRouter.post("/blasts/:id/status", requireScope("comms.approve"), async (req, res) => {
+socialRouter.post("/blasts/:id/status", requireScope("comms.approve"), requirePhaseWritable, async (req, res) => {
   const status = req.body?.status;
   if (!BLAST_STATUSES.includes(status)) {
     res.status(400).json({ error: "invalid_status" });
@@ -222,5 +231,5 @@ socialRouter.post("/blasts/:id/status", requireScope("comms.approve"), async (re
     res.json(result.blast);
     return;
   }
-  res.status(404).json({ error: result.code });
+  res.status(result.code === "not_found" ? 404 : 409).json({ error: result.code });
 });

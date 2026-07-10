@@ -46,8 +46,8 @@ app.use(express.urlencoded({ extended: false, limit: "64kb" })); // Twilio webho
 app.use(
   cors({
     origin: ALLOWED_ORIGIN === "*" ? true : ALLOWED_ORIGIN.split(","),
-    // Only the verbs the API actually uses.
-    methods: ["GET", "POST"],
+    // Only the verbs the API actually uses (DELETE = team roster soft-remove).
+    methods: ["GET", "POST", "DELETE"],
     allowedHeaders: ["Authorization", "Content-Type", "X-StepUp-Token", "X-Twilio-Signature"],
     // Let paginating clients read the total separately from the (sliced) body.
     exposedHeaders: ["X-Total-Count"],

@@ -1,14 +1,13 @@
 // Airtable StorePort adapter (Phase 1). Activated by STORE_DRIVER=airtable with
-// AIRTABLE_PAT + AIRTABLE_BASE_ID (default base appiuSYCexFUmGIOr) loaded from
-// SSM SecureString / env. Never tested from this repo's sandbox; structurally
-// complete and typechecked. Each record stores queryable fields plus a `Data`
+// AIRTABLE_PAT + AIRTABLE_BASE_ID (both required — no default base) loaded from
+// SSM SecureString / env. Each record stores queryable fields plus a `Data`
 // JSON blob holding the full typed object — pragmatic and drift-resistant.
 //
 // Expected tables (create in the base): Tasks, Events, Shifts, Templates,
-// Contacts, ContactLogs, FollowUps, OptOut, Outbox, Audit, SocialPosts,
-// SocialBlasts. Each needs a `Data` long-text field. Point reads use
-// filterByFormula on these single-line-text columns, so they must exist where
-// used: `RecordId` (Tasks/Events/Shifts/Templates/Contacts/SocialPosts/SocialBlasts),
+// Contacts, ContactLogs, FollowUps, OptOut, Outbox, Audit, TeamMembers,
+// SocialPosts, SocialBlasts. Each needs a `Data` long-text field. Point reads
+// use filterByFormula on these single-line-text columns, so they must exist where
+// used: `RecordId` (Tasks/Events/Shifts/Templates/Contacts/TeamMembers/SocialPosts/SocialBlasts),
 // `ContactKey` (Contacts/OptOut), `IdempotencyKey` (Outbox). The remaining columns
 // (Status, Zip, County, Category, RegStatus, Action, EventId) are for human-readable
 // filtering in the Airtable UI. See docs/airtable-setup.md.
@@ -64,8 +63,12 @@ function now(): string {
 
 export async function makeAirtableStore(): Promise<StorePort> {
   const pat = await getConfig("AIRTABLE_PAT");
-  const baseId = (await getConfig("AIRTABLE_BASE_ID")) ?? "appiuSYCexFUmGIOr";
+  // No fallback base id: the old default pointed at a DIFFERENT campaign base
+  // (the expenses base), so a missing AIRTABLE_BASE_ID would silently write
+  // voter-contact data into the wrong base. Fail fast instead (/ready → 503).
+  const baseId = await getConfig("AIRTABLE_BASE_ID");
   if (!pat) throw new Error("AIRTABLE_PAT not configured");
+  if (!baseId) throw new Error("AIRTABLE_BASE_ID not configured");
 
   async function req<T>(
     method: string,

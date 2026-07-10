@@ -106,12 +106,22 @@ All require a valid clerk JWT. Scope and phase are re-checked server-side on eve
 | GET | `/contacts/:id` | `voter.read` | one contact + its disposition logs |
 | POST | `/contacts/:id/logs` | `contact.log` | log a disposition (registered/opted_out reflect onto the contact) |
 | POST | `/contacts/:id/optout` | `optout.manage` | opt a contact out (sets flag + adds opaque key to opt-out list) |
+| POST | `/contacts/:id/consent` | `contact.log` | record SMS consent |
+| POST | `/contacts/:id/vote-plan` | `contact.log` | record a GOTV vote plan (method/date/time/ride) |
+| POST | `/contacts/:id/followups` | `contact.log` | schedule a GOTV follow-up reminder |
+| GET | `/followups?status=` | `voter.read` | list follow-up reminders |
+| POST | `/followups/:id/done` · `/cancel` | `contact.log` | resolve a follow-up |
+| GET | `/team` · `/team/:clerkId/work` | `team.read` | captain's roster + a volunteer's work |
+| POST | `/team` | `team.manage` | invite/add a volunteer to the roster |
+| DELETE | `/team/:id` | `team.manage` | soft-remove a volunteer from the roster |
+| GET | `/audit` · `/audit/verify` | `audit.read` | audit log + tamper-evident chain verification |
+| GET | `/dashboard/gotv` | `voter.read` | GOTV dashboard (counts only) |
 | POST | `/comms/send-to-contact` | `comms.send` | gated send to a stored contact; register sends flip them to `reg_link_sent` |
 | GET | `/social/posts?phase=&blastId=&category=&status=` | any clerk (approved); `comms.draft`/`comms.approve` see drafts | shareable post library (phase-relevant) |
 | POST | `/social/generate` | `comms.draft` | generate an unsaved post (text + hashtags) from campaign facts |
 | POST | `/social/posts` | `comms.draft` | save a shareable post draft (disclaimer auto-detected) |
 | POST | `/social/posts/:id/approve` | `comms.approve` | approve/reject; blocked if disclaimer missing |
-| POST | `/social/posts/:id/shared` | any clerk | self-report a share to your own channel (audited) |
+| POST | `/social/posts/:id/shared` | any clerk | self-report a share (audited, rate-limited, phase-relevant posts only) |
 | GET | `/social/blasts?status=` | any clerk | list amplification blasts |
 | POST | `/social/blasts` | `comms.draft` | schedule a blast |
 | POST | `/social/blasts/:id/status` | `comms.approve` | advance a blast `scheduled→active→done` |
@@ -149,7 +159,7 @@ Each integration is a swappable adapter, defaulting to a safe no-op/in-memory mo
 | Concern | Env | Default | Real adapter |
 |---|---|---|---|
 | Auth | `AUTH_DRIVER` | `dev` (disabled in prod) | `clerk` (`CLERK_JWKS_URL`, `CLERK_ISSUER`) |
-| Storage | `STORE_DRIVER` | `memory` | `airtable` (`AIRTABLE_PAT`, `AIRTABLE_BASE_ID=appiuSYCexFUmGIOr`) |
+| Storage | `STORE_DRIVER` | `memory` | `airtable` (`AIRTABLE_PAT` + `AIRTABLE_BASE_ID`, both required) |
 | Calendar | `CALENDAR_DRIVER` | `noop` | `google` (`GOOGLE_CALENDAR_TOKEN`, `GOOGLE_CALENDAR_ID`) |
 | Mailer | `MAILER_DRIVER` | `noop` | `gmail` (`GMAIL_TOKEN`) |
 | SMS | `SMS_DRIVER` | `noop` | `twilio` (`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_MESSAGING_SERVICE_SID`) |
@@ -170,7 +180,7 @@ v0.6 scaffold. **Live and smoke-tested:**
 
 Public-data clients (Census geocoder + ACS demographics, FEC race finance, OSM venues, DESE district profile) are implemented server-side with timeouts and graceful nulls, and covered by deterministic mocked-fetch tests (`service/src/__tests__/publicData.test.ts`). They were not live-verified from the build sandbox (egress is allowlist-restricted); ACS/OSM venue enrichment attaches to `/location/resolve` only when `ENRICH_RESOLVE=true`.
 
-Providers are code-complete + tested, pending live credentials: Clerk auth (`docs/clerk-setup.md`), Airtable storage (`docs/airtable-setup.md`), and Google Calendar/Gmail via service-account OAuth with token refresh (`docs/google-oauth-setup.md`). The deploy path is in place — root `Dockerfile` + `docs/deploy.md`, with security headers, pinned CORS, and the refuse-to-boot guard.
+Clerk auth and Airtable storage are **live in production** (see `docs/deploy-status.md`; setup references in `docs/clerk-setup.md` / `docs/airtable-setup.md`). Google Calendar/Gmail via service-account OAuth remains code-complete pending live credentials (`docs/google-oauth-setup.md`). The deploy path is in place — root `Dockerfile` + `docs/deploy.md`, with security headers, pinned CORS, and the refuse-to-boot guard.
 
 The extension now does **in-panel Clerk sign-in** via `@clerk/chrome-extension`: set
 `VITE_CLERK_PUBLISHABLE_KEY` (see `extension/.env.example` + `docs/clerk-setup.md`) and the Clerk
@@ -212,8 +222,10 @@ number:
 - **Extension** — the countdown formatter, role labels, scope-gated tab
   rendering, and the sign-in form.
 
-`.github/workflows/ci.yml` runs `npm ci → typecheck → build → test` on every push
-and pull request.
+`.github/workflows/ci.yml` runs three jobs on every push and pull request:
+`build-and-test` (`npm ci → typecheck → build → test`), `docker-build` (image
+build + landing-page/download smoke test), and `audit` (`npm audit` at high
+severity, production deps).
 
 ## Compliance (educational, not legal advice)
 

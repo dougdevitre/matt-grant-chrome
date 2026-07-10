@@ -20,6 +20,23 @@ const VALID_KINDS: EventKind[] = [
   "early_vote_reminder",
 ];
 
+const VALID_PHASES: Phase[] = [
+  "PHASE_1_REGISTER",
+  "PHASE_2_PLAN",
+  "PHASE_3_TURNOUT",
+  "PHASE_CLOSED",
+];
+
+// Default phase window per kind. Events are phase-filtered on read, so a bad
+// default makes an event invisible — the old blanket PHASE_1_REGISTER default
+// meant any event created after Jul 8 without explicit phases never showed up.
+const PHASES_FOR_KIND: Record<EventKind, Phase[]> = {
+  registration_drive: ["PHASE_1_REGISTER"],
+  canvass: ["PHASE_2_PLAN", "PHASE_3_TURNOUT"],
+  phone_bank: ["PHASE_2_PLAN", "PHASE_3_TURNOUT"],
+  early_vote_reminder: ["PHASE_3_TURNOUT"],
+};
+
 // GET /events?county=&zip=&limit=&offset= — phase-filtered events with shifts.
 eventsRouter.get("/", requireScope("voter.read"), async (req, res) => {
   const county = queryStr(req, "county");
@@ -36,7 +53,16 @@ eventsRouter.post("/", requireScope("events.write"), requirePhaseWritable, async
     res.status(400).json({ error: "missing_fields" });
     return;
   }
-  const phases: Phase[] = Array.isArray(b.phases) ? b.phases : ["PHASE_1_REGISTER"];
+  // listEvents sorts by Date.parse(startsAt) — an unparseable date breaks the
+  // calendar ordering, so reject it up front (mirrors the followups route).
+  if (Number.isNaN(Date.parse(String(b.startsAt))) || Number.isNaN(Date.parse(String(b.endsAt)))) {
+    res.status(400).json({ error: "invalid_date" });
+    return;
+  }
+  const givenPhases = Array.isArray(b.phases)
+    ? (b.phases.filter((p: unknown) => VALID_PHASES.includes(p as Phase)) as Phase[])
+    : [];
+  const phases: Phase[] = givenPhases.length ? givenPhases : PHASES_FOR_KIND[b.kind as EventKind];
   const event = await createEvent(
     {
       title: String(b.title),
@@ -59,6 +85,16 @@ eventsRouter.post("/:id/shifts", requireScope("events.write"), requirePhaseWrita
   const b = req.body ?? {};
   if (!b.role || !b.startsAt || !b.endsAt || typeof b.capacity !== "number") {
     res.status(400).json({ error: "missing_fields" });
+    return;
+  }
+  if (Number.isNaN(Date.parse(String(b.startsAt))) || Number.isNaN(Date.parse(String(b.endsAt)))) {
+    res.status(400).json({ error: "invalid_date" });
+    return;
+  }
+  // capacity <= 0 would make the shift permanently unclaimable (claimed >= cap
+  // is immediately true), so require a positive integer.
+  if (!Number.isInteger(b.capacity) || b.capacity < 1) {
+    res.status(400).json({ error: "invalid_capacity" });
     return;
   }
   const shift = await addShift(

@@ -109,7 +109,8 @@ let fake: ReturnType<typeof makeFakeAirtable>;
 
 beforeEach(() => {
   process.env.AIRTABLE_PAT = "test-pat";
-  delete process.env.AIRTABLE_BASE_ID;
+  // Required since the wrong-base fallback default was removed.
+  process.env.AIRTABLE_BASE_ID = "appTestBase0000000";
   fake = makeFakeAirtable();
   vi.stubGlobal("fetch", fake.fetchImpl);
 });
@@ -117,6 +118,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   delete process.env.AIRTABLE_PAT;
+  delete process.env.AIRTABLE_BASE_ID;
 });
 
 describe("Airtable adapter", () => {
