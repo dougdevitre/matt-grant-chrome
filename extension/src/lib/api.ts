@@ -2,6 +2,7 @@
 // from chrome.storage.local (set by your auth flow / Clerk integration). No
 // secrets are bundled here.
 
+import { clerkFreshSessionToken } from "./clerkSession.js";
 import type {
   BatchResult,
   ClerkIdentity,
@@ -167,6 +168,28 @@ export const api = {
     call<Shift>(`/events/shifts/${shiftId}/claim`, {
       method: "POST",
       body: JSON.stringify(version != null ? { version } : {}),
+    }),
+  createEvent: (input: {
+    title: string;
+    kind: string;
+    county: string;
+    zip?: string | null;
+    venueName?: string | null;
+    startsAt: string;
+    endsAt: string;
+    phases?: string[];
+  }) =>
+    call<Omit<EventWithShifts, "shifts">>("/events", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  addShift: (
+    eventId: string,
+    input: { role: string; startsAt: string; endsAt: string; capacity: number }
+  ) =>
+    call<Shift>(`/events/${eventId}/shifts`, {
+      method: "POST",
+      body: JSON.stringify(input),
     }),
 
   // Contacts
@@ -443,10 +466,13 @@ export async function stepUp(accessCode?: string): Promise<string> {
       "authMode",
       "clerkSessionToken",
     ]);
-  // Clerk re-presents the stored session token; dev re-presents the access code.
+  // Clerk re-presents a FRESH session token minted now — Clerk session JWTs
+  // expire in ~60s, so the one stored at sign-in is long dead by the first
+  // send. The stored snapshot is only a fallback for the brief window where
+  // the provider isn't mounted. Dev re-presents the access code.
   const body =
     authMode === "clerk"
-      ? { sessionToken: clerkSessionToken }
+      ? { sessionToken: (await clerkFreshSessionToken()) ?? clerkSessionToken }
       : { devSecret: accessCode, sub: authSub, role: authRole };
   const res = await fetch(`${apiBase}/auth/step-up`, {
     method: "POST",

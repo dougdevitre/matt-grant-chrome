@@ -6,6 +6,7 @@
 
 import { randomUUID } from "node:crypto";
 import { COMMITTEE_NAME } from "../config.js";
+import { currentPhase } from "../phase.js";
 import { audit, getStore } from "./store.js";
 import type { NewSocialBlast, NewSocialPost } from "./store.js";
 import type { SocialBlast, SocialPost, BlastStatus } from "./types.js";
@@ -54,6 +55,9 @@ export async function approveSocialPost(
   const post = await store.getSocialPost(id);
   if (!post) return { ok: false, code: "not_found" };
   if (approve && !post.hasDisclaimer) return { ok: false, code: "missing_disclaimer" };
+  // Idempotent: re-approving an approved post must not mint a new approval id —
+  // the compliance record should point at ONE approval event per approval.
+  if (approve && post.status === "approved") return { ok: true, post };
   const updated: SocialPost = {
     ...post,
     status: approve ? "approved" : "draft",
@@ -73,24 +77,29 @@ export async function approveSocialPost(
 
 export interface MarkSharedResult {
   ok: boolean;
-  code?: "not_found" | "not_approved";
+  code?: "not_found" | "not_approved" | "phase_mismatch";
   post?: SocialPost;
 }
 
 /**
  * A volunteer self-reports sharing an approved post to their own channel. Only
- * approved posts count (a draft isn't shareable), and the action is audited so
- * the amplification total is attributable.
+ * approved posts count (a draft isn't shareable), the post must still be
+ * phase-relevant (sharing "register by Jul 8" after the deadline is stale
+ * misinformation — mirrors the comms send pipeline's phase_mismatch), and the
+ * action is audited so the amplification total is attributable.
  */
 export async function markShared(
   id: string,
   clerkId: string,
-  platform?: string
+  platform?: string,
+  now: Date = new Date()
 ): Promise<MarkSharedResult> {
   const store = await getStore();
   const post = await store.getSocialPost(id);
   if (!post) return { ok: false, code: "not_found" };
   if (post.status !== "approved") return { ok: false, code: "not_approved" };
+  if (post.phases.length > 0 && !post.phases.includes(currentPhase(now)))
+    return { ok: false, code: "phase_mismatch" };
   const updated = await store.incrementShareCount(id);
   if (!updated) return { ok: false, code: "not_found" };
   await audit(
@@ -115,9 +124,14 @@ export async function createBlast(
 
 export interface SetBlastStatusResult {
   ok: boolean;
-  code?: "not_found";
+  code?: "not_found" | "invalid_transition";
   blast?: SocialBlast;
 }
+
+// Blasts only move forward: scheduled → active → done (skipping straight to
+// done is fine — cancelling a scheduled blast). Backwards would resurrect a
+// finished blast onto everyone's Share tab.
+const BLAST_ORDER: Record<BlastStatus, number> = { scheduled: 0, active: 1, done: 2 };
 
 export async function setBlastStatus(
   id: string,
@@ -127,6 +141,9 @@ export async function setBlastStatus(
   const store = await getStore();
   const blast = await store.getSocialBlast(id);
   if (!blast) return { ok: false, code: "not_found" };
+  if (BLAST_ORDER[status] < BLAST_ORDER[blast.status])
+    return { ok: false, code: "invalid_transition" };
+  if (status === blast.status) return { ok: true, blast }; // idempotent no-op
   const updated: SocialBlast = { ...blast, status, updatedAt: new Date().toISOString() };
   await store.putSocialBlast(updated);
   await audit(store, clerkId, `social_blast.${status}`, "social_blast", id);

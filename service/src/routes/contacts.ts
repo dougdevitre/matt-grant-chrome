@@ -204,6 +204,10 @@ contactsRouter.post("/:id/vote-plan", requireScope("contact.log"), requirePhaseW
     res.status(400).json({ error: "invalid_method" });
     return;
   }
+  if (typeof b.date === "string" && b.date && Number.isNaN(Date.parse(b.date))) {
+    res.status(400).json({ error: "invalid_date" });
+    return;
+  }
   const expectedVersion = typeof b.version === "number" ? b.version : undefined;
   const result = await setVotePlan(
     pathParam(req, "id"),

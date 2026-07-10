@@ -7,7 +7,7 @@
 //
 // Keep this list in lockstep with `host_permissions` in extension/public/manifest.json.
 
-import type { Scope } from "./types.js";
+import type { Phase, Scope } from "./types.js";
 
 export interface CompanionAction {
   label: string;
@@ -22,7 +22,15 @@ export interface CompanionSite {
   anyScopes: Scope[] | null;
   title: string;
   body: string;
+  /** Phase-specific body override — date-sensitive tips ("register by Jul 8")
+   * must not keep showing after the deadline. Falls back to `body`. */
+  bodyByPhase?: Partial<Record<Phase, string>>;
   actions: CompanionAction[];
+}
+
+/** The body to show for the current (server-decided) phase. */
+export function companionBody(site: CompanionSite, phase: Phase | null): string {
+  return (phase && site.bodyByPhase?.[phase]) || site.body;
 }
 
 const SOS_REGISTER = "https://www.sos.mo.gov/elections/goVoteMissouri/register";
@@ -37,6 +45,14 @@ export const COMPANION_SITES: CompanionSite[] = [
     anyScopes: ["voter.read"],
     title: "You're on the Missouri voter site",
     body: "Missouri's registration deadline for the Aug 4 primary is Jul 8 (no same-day registration). After you help someone, log the outcome in your Tasks / Contacts tab.",
+    bodyByPhase: {
+      PHASE_2_PLAN:
+        "The Jul 8 registration deadline for the Aug 4 primary has passed — new registrations count for November. Help voters confirm their registration and make a plan to vote, then log the outcome in your Tasks / Contacts tab.",
+      PHASE_3_TURNOUT:
+        "It's turnout time for the Aug 4 primary. Help voters check their registration and find their polling place, then log the outcome in your Tasks / Contacts tab.",
+      PHASE_CLOSED:
+        "The Aug 4 primary is over. New registrations here count for the November general.",
+    },
     actions: [
       { label: "Register", url: SOS_REGISTER },
       { label: "Check status", url: SOS_STATUS },
@@ -70,6 +86,13 @@ export const COMPANION_SITES: CompanionSite[] = [
     anyScopes: ["voter.read"],
     title: "You're on a county election office site",
     body: "This is a MO-02 Local Election Authority. Key dates: register by Jul 8, primary Aug 4.",
+    bodyByPhase: {
+      PHASE_2_PLAN:
+        "This is a MO-02 Local Election Authority. Registration for the Aug 4 primary closed Jul 8; early voting starts Jul 21.",
+      PHASE_3_TURNOUT:
+        "This is a MO-02 Local Election Authority. Early voting is open; primary election day is Aug 4.",
+      PHASE_CLOSED: "This is a MO-02 Local Election Authority. The Aug 4 primary is over.",
+    },
     actions: [
       { label: "Check status", url: SOS_STATUS },
       { label: "Find polling place", url: SOS_POLLING },

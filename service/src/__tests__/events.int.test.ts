@@ -111,3 +111,61 @@ describe("shift claim", () => {
     expect(res.body.error).toBe("forbidden");
   });
 });
+
+describe("event/shift creation validation", () => {
+  const events = () => bearer(tokenFor("events_clerk"));
+
+  it("rejects an unparseable event date", async () => {
+    const res = await request(app)
+      .post("/events")
+      .set("Authorization", events())
+      .send({
+        title: "Canvass",
+        kind: "canvass",
+        county: "St. Louis County",
+        startsAt: "not-a-date",
+        endsAt: "2026-07-18T14:00:00-05:00",
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("invalid_date");
+  });
+
+  it("defaults phases from the kind, not PHASE_1 (a stale default hid new events)", async () => {
+    const res = await request(app)
+      .post("/events")
+      .set("Authorization", events())
+      .send({
+        title: "Weekend canvass",
+        kind: "canvass",
+        county: "St. Louis County",
+        startsAt: "2026-07-18T10:00:00-05:00",
+        endsAt: "2026-07-18T14:00:00-05:00",
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.phases).toEqual(["PHASE_2_PLAN", "PHASE_3_TURNOUT"]);
+  });
+
+  it("rejects a non-positive shift capacity (would be permanently unclaimable)", async () => {
+    const created = await request(app)
+      .post("/events")
+      .set("Authorization", events())
+      .send({
+        title: "Phone bank",
+        kind: "phone_bank",
+        county: "St. Charles County",
+        startsAt: "2026-07-18T10:00:00-05:00",
+        endsAt: "2026-07-18T14:00:00-05:00",
+      });
+    const res = await request(app)
+      .post(`/events/${created.body.id}/shifts`)
+      .set("Authorization", events())
+      .send({
+        role: "Caller",
+        startsAt: created.body.startsAt,
+        endsAt: created.body.endsAt,
+        capacity: 0,
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("invalid_capacity");
+  });
+});

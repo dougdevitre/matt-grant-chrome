@@ -112,3 +112,20 @@ describe("SharePanel", () => {
     expect(screen.queryByText(/Pending review/)).not.toBeInTheDocument();
   });
 });
+
+describe("SharePanel drafter visibility", () => {
+  const drafter = {
+    clerkId: "d1",
+    role: "social_comms_clerk",
+    scopes: ["comms.draft", "comms.send", "task.read", "task.write"],
+  } as never;
+
+  it("shows the pending queue read-only to a drafter (no Approve/Reject)", async () => {
+    vi.mocked(api.socialPosts).mockResolvedValue([post({ status: "draft" })] as never);
+    render(<SharePanel me={drafter} phase={null} />);
+    expect(await screen.findByText(/Pending review/)).toBeInTheDocument();
+    expect(screen.getByText("Waiting on a Compliance Clerk.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reject" })).not.toBeInTheDocument();
+  });
+});

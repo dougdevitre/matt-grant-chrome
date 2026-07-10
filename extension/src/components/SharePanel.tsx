@@ -244,12 +244,16 @@ function Authoring({ onSaved }: { onSaved: () => void }) {
   );
 }
 
-// Compliance review of pending posts (comms.approve).
+// Pending drafts. Compliance (comms.approve) can act on them; a drafter
+// (comms.draft only) sees the same list read-only — otherwise a saved draft
+// vanishes with no way to know whether it was approved or rejected.
 function Approvals({
   posts,
+  canApprove,
   onChanged,
 }: {
   posts: SocialPost[];
+  canApprove: boolean;
   onChanged: () => void;
 }) {
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -283,22 +287,26 @@ function Approvals({
             <div className="checks">
               <span className={p.hasDisclaimer ? "chk ok" : "chk bad"}>disclaimer</span>
             </div>
-            <div className="task-actions">
-              <button
-                className="btn"
-                disabled={busyId === p.id || !p.hasDisclaimer}
-                onClick={() => act(p.id, true)}
-              >
-                Approve
-              </button>
-              <button
-                className="btn secondary"
-                disabled={busyId === p.id}
-                onClick={() => act(p.id, false)}
-              >
-                Reject
-              </button>
-            </div>
+            {canApprove ? (
+              <div className="task-actions">
+                <button
+                  className="btn"
+                  disabled={busyId === p.id || !p.hasDisclaimer}
+                  onClick={() => act(p.id, true)}
+                >
+                  Approve
+                </button>
+                <button
+                  className="btn secondary"
+                  disabled={busyId === p.id}
+                  onClick={() => act(p.id, false)}
+                >
+                  Reject
+                </button>
+              </div>
+            ) : (
+              <p className="note">Waiting on a Compliance Clerk.</p>
+            )}
           </div>
         ))
       )}
@@ -324,7 +332,9 @@ export function SharePanel({ me, phase }: { me: ClerkIdentity; phase: Phase | nu
       // approved yet. Unfiltered only when the phase is unknown.
       setPosts(await api.socialPosts(phase ? { phase } : {}));
       setDash(await api.socialDashboard());
-      if (has("comms.approve")) {
+      // Drafters and approvers both track the pending queue (the server allows
+      // status=draft for either scope).
+      if (has("comms.approve") || has("comms.draft")) {
         setPending(await api.socialPosts({ status: "draft" }));
       }
     } catch (e) {
@@ -404,8 +414,10 @@ export function SharePanel({ me, phase }: { me: ClerkIdentity; phase: Phase | nu
       {/* Authoring (Social & Comms Clerk) */}
       {has("comms.draft") ? <Authoring onSaved={load} /> : null}
 
-      {/* Compliance review */}
-      {has("comms.approve") ? <Approvals posts={pending} onChanged={load} /> : null}
+      {/* Pending queue: compliance acts, drafters watch their drafts' status */}
+      {has("comms.approve") || has("comms.draft") ? (
+        <Approvals posts={pending} canApprove={has("comms.approve")} onChanged={load} />
+      ) : null}
     </div>
   );
 }

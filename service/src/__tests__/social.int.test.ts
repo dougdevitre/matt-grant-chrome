@@ -2,16 +2,26 @@
 // (comms.draft), approve (comms.approve), blasts, and the media dashboard.
 
 import request from "supertest";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { app } from "../index.js";
 import { resetStoreForTests } from "../lib/store.js";
 import { TEST_JWT_SECRET, tokenFor, bearer } from "./helpers.js";
+
+// Pin the clock to PHASE_2_PLAN so the suite doesn't decay as the real
+// election clock advances (shares are phase-gated; PHASE_CLOSED freezes writes).
+const PHASE2 = new Date("2026-07-15T12:00:00Z");
+const CLOSED = new Date("2026-08-10T12:00:00Z");
 
 beforeAll(() => {
   process.env.JWT_SECRET = TEST_JWT_SECRET;
 });
 beforeEach(() => {
   resetStoreForTests();
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(PHASE2);
+});
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 const social = () => bearer(tokenFor("social_comms_clerk"));
@@ -135,6 +145,57 @@ describe("draft → approve → share lifecycle", () => {
     expect(res.body.error).toBe("not_approved");
   });
 
+  it("refuses to count a share on an out-of-phase post (stale content)", async () => {
+    // The seeded register post is PHASE_1-only; the clock is pinned to PHASE_2.
+    const posts = await request(app)
+      .get("/social/posts?category=register")
+      .set("Authorization", voter());
+    const res = await request(app)
+      .post(`/social/posts/${posts.body[0].id}/shared`)
+      .set("Authorization", voter());
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe("phase_mismatch");
+  });
+
+  it("blocks the voter-facing public role from self-reporting shares", async () => {
+    const posts = await request(app)
+      .get("/social/posts?category=donate")
+      .set("Authorization", voter());
+    const res = await request(app)
+      .post(`/social/posts/${posts.body[0].id}/shared`)
+      .set("Authorization", bearer(tokenFor("public")))
+      .send({ platform: "x" });
+    expect(res.status).toBe(403);
+  });
+
+  it("re-approving an approved post is idempotent (approval id is stable)", async () => {
+    const id = await draft(true);
+    const first = await request(app)
+      .post(`/social/posts/${id}/approve`)
+      .set("Authorization", compliance())
+      .send({ approve: true });
+    const second = await request(app)
+      .post(`/social/posts/${id}/approve`)
+      .set("Authorization", compliance())
+      .send({ approve: true });
+    expect(second.status).toBe(200);
+    expect(second.body.complianceApprovalId).toBe(first.body.complianceApprovalId);
+  });
+
+  it("freezes social writes after the election closes", async () => {
+    vi.setSystemTime(CLOSED);
+    const res = await request(app)
+      .post("/social/posts")
+      .set("Authorization", social())
+      .send({
+        category: "donate",
+        title: "x",
+        variants: [{ platform: "x", text: "x" }],
+      });
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe("phase_closed");
+  });
+
   it("requires comms.approve to approve", async () => {
     const id = await draft(true);
     expect(
@@ -146,7 +207,9 @@ describe("draft → approve → share lifecycle", () => {
     // Distinct sub so the shared counter doesn't bleed into other tests
     // (the counter is process-wide and not reset with the store).
     const spammer = () => bearer(tokenFor("voter_contact_clerk", "share-spammer"));
-    const posts = await request(app).get("/social/posts").set("Authorization", voter());
+    const posts = await request(app)
+      .get("/social/posts?category=donate") // phase-relevant at the pinned date
+      .set("Authorization", voter());
     const postId = posts.body[0].id;
     let status = 0;
     for (let i = 0; i < 31; i++) {
@@ -171,7 +234,9 @@ describe("blasts + GET /dashboard/social", () => {
     expect(before.status).toBe(200);
     const baseline = before.body.totalShares;
 
-    const posts = await request(app).get("/social/posts").set("Authorization", voter());
+    const posts = await request(app)
+      .get("/social/posts?category=donate")
+      .set("Authorization", voter());
     const postId = posts.body[0].id;
     await request(app)
       .post(`/social/posts/${postId}/shared`)
@@ -205,5 +270,27 @@ describe("blasts + GET /dashboard/social", () => {
       .send({ status: "active" });
     expect(advanced.status).toBe(200);
     expect(advanced.body.status).toBe("active");
+  });
+
+  it("rejects an unparseable scheduledFor", async () => {
+    const res = await request(app)
+      .post("/social/blasts")
+      .set("Authorization", social())
+      .send({ title: "x", scheduledFor: "not-a-date" });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("invalid_date");
+  });
+
+  it("refuses to move a blast backwards (done → active)", async () => {
+    const created = await request(app)
+      .post("/social/blasts")
+      .set("Authorization", social())
+      .send({ title: "Wrapped", scheduledFor: "2026-07-10T09:00:00-05:00", status: "done" });
+    const res = await request(app)
+      .post(`/social/blasts/${created.body.id}/status`)
+      .set("Authorization", compliance())
+      .send({ status: "active" });
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe("invalid_transition");
   });
 });

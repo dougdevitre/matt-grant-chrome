@@ -287,6 +287,7 @@ export default function App() {
       <CompanionCard
         host={activeHost}
         scopes={scopes}
+        phase={phase?.phase ?? null}
         onDismiss={() => void toggleSiteTips(false)}
       />
 

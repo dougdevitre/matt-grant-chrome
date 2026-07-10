@@ -22,19 +22,29 @@ export function TaskQueue({
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The Local tab's resolved ZIP scopes the queue — useful, but it must be
+  // visible and escapable, or tasks elsewhere silently vanish and an empty
+  // queue reads as "all done".
+  const [useZip, setUseZip] = useState(true);
+  const effectiveZip = useZip ? zip : null;
 
   async function load() {
     try {
-      setTasks(await api.tasks(zip));
+      setTasks(await api.tasks(effectiveZip));
     } catch (e) {
       setError(e instanceof Error ? e.message : "load_failed");
     }
   }
 
   useEffect(() => {
-    load();
+    setUseZip(true); // a newly resolved location re-applies its filter
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zip]);
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zip, useZip]);
 
   async function act(id: string, fn: () => Promise<unknown>) {
     setBusyId(id);
@@ -53,17 +63,32 @@ export function TaskQueue({
     }
   }
 
+  const zipBanner = effectiveZip ? (
+    <p className="note">
+      Showing tasks for ZIP {effectiveZip}.{" "}
+      <button className="linklike" onClick={() => setUseZip(false)}>
+        Show all
+      </button>
+    </p>
+  ) : null;
+
   if (error) return <div className="warn" role="alert">{messageForError(error)}</div>;
   if (!tasks) return <p className="note">Loading your queue…</p>;
   if (tasks.length === 0)
     return (
-      <div className="empty">
-        Your queue is clear for this phase. Nice work.
+      <div className="queue">
+        {zipBanner}
+        <div className="empty">
+          {effectiveZip
+            ? `No tasks in ZIP ${effectiveZip} for this phase.`
+            : "Your queue is clear for this phase. Nice work."}
+        </div>
       </div>
     );
 
   return (
     <div className="queue">
+      {zipBanner}
       {tasks.map((t) => {
         const mine = t.assignedClerkId === me.clerkId;
         const busy = busyId === t.id;

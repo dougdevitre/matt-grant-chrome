@@ -17,3 +17,24 @@ export async function clerkSignOut(): Promise<void> {
     /* best-effort — clearing our own scoped token is what matters */
   }
 }
+
+let getTokenFn: (() => Promise<string | null>) | null = null;
+
+export function registerClerkGetToken(fn: (() => Promise<string | null>) | null): void {
+  getTokenFn = fn;
+}
+
+/**
+ * A FRESH Clerk session token, or null when no provider is mounted / no
+ * session. Clerk session JWTs are short-lived (~60s), so anything that
+ * re-presents one to the backend (SMS step-up) must mint it at call time —
+ * the token snapshotted at sign-in is long expired by then.
+ */
+export async function clerkFreshSessionToken(): Promise<string | null> {
+  if (!getTokenFn) return null;
+  try {
+    return await getTokenFn();
+  } catch {
+    return null;
+  }
+}

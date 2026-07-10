@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchCompanion } from "./companionSites.js";
+import { companionBody, matchCompanion } from "./companionSites.js";
 import type { Scope } from "./types.js";
 
 const S = (...s: string[]) => s as Scope[];
@@ -51,5 +51,25 @@ describe("matchCompanion", () => {
     expect(matchCompanion("www.facebook.com", S("voter.read"))?.id).toBe("social");
     // Wrong scope → no card (finance-gated).
     expect(matchCompanion("winred.com", S("voter.read"))).toBeNull();
+  });
+});
+
+describe("companionBody (phase-aware tips)", () => {
+
+  it("swaps the stale registration-deadline copy after Jul 8 (PHASE_2)", () => {
+    const site = matchCompanion("www.sos.mo.gov", S("voter.read"))!;
+    expect(companionBody(site, "PHASE_2_PLAN")).toMatch(/deadline .* has passed/i);
+    expect(companionBody(site, "PHASE_2_PLAN")).not.toMatch(/deadline .* is Jul 8/i);
+  });
+
+  it("falls back to the default body for PHASE_1 and unknown phase", () => {
+    const site = matchCompanion("www.sos.mo.gov", S("voter.read"))!;
+    expect(companionBody(site, "PHASE_1_REGISTER")).toBe(site.body);
+    expect(companionBody(site, null)).toBe(site.body);
+  });
+
+  it("covers the county-office card too", () => {
+    const site = matchCompanion("stlouiscountymo.gov", S("voter.read"))!;
+    expect(companionBody(site, "PHASE_3_TURNOUT")).toMatch(/early voting/i);
   });
 });

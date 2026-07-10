@@ -19,7 +19,11 @@ export function Countdown({ config }: { config: PhaseConfig }) {
     <div className="countdown" role="status">
       <div className="label">{config.label}</div>
       <p className="cta">{config.primaryCta}</p>
-      <div className="clock">{remaining} until next deadline</div>
+      <div className="clock">
+        {remaining === "now"
+          ? "Deadline reached"
+          : `${remaining} until next deadline`}
+      </div>
     </div>
   );
 }

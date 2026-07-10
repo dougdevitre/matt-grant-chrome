@@ -33,3 +33,13 @@ describe("request id + readiness", () => {
     expect(res.body).toEqual({ ready: true });
   });
 });
+
+describe("CORS", () => {
+  it("allows DELETE in preflight (team roster soft-remove is the one DELETE route)", async () => {
+    const res = await request(app)
+      .options("/team/some-id")
+      .set("Origin", "chrome-extension://abcdefg")
+      .set("Access-Control-Request-Method", "DELETE");
+    expect(res.headers["access-control-allow-methods"]).toContain("DELETE");
+  });
+});

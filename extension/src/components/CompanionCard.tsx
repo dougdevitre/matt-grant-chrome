@@ -1,16 +1,20 @@
-import type { Scope } from "../lib/types.js";
-import { matchCompanion } from "../lib/companionSites.js";
+import type { Phase, Scope } from "../lib/types.js";
+import { companionBody, matchCompanion } from "../lib/companionSites.js";
 
 // The "Working here" card. Shown only when the active tab's host matches an
 // allow-listed companion site the clerk's role can use. Renders nothing
-// otherwise. `onDismiss` hides it for the rest of the panel session.
+// otherwise. `onDismiss` hides it for the rest of the panel session. The body
+// is phase-aware so date-sensitive tips (registration deadline) don't outlive
+// their deadline.
 export function CompanionCard({
   host,
   scopes,
+  phase = null,
   onDismiss,
 }: {
   host: string | null;
   scopes: Scope[];
+  phase?: Phase | null;
   onDismiss: () => void;
 }) {
   const site = matchCompanion(host, scopes);
@@ -29,7 +33,7 @@ export function CompanionCard({
         </button>
       </div>
       <h3 className="companion-title">{site.title}</h3>
-      <p className="companion-body">{site.body}</p>
+      <p className="companion-body">{companionBody(site, phase)}</p>
       {site.actions.length > 0 ? (
         <div className="companion-actions">
           {site.actions.map((a) => (

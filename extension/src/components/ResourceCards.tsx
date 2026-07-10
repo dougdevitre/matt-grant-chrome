@@ -24,8 +24,6 @@ function Card({ card }: { card: ResourceCard }) {
         >
           {card.ctaLabel ?? "Open"}
         </a>
-      ) : card.ctaLabel ? (
-        <button className="btn secondary">{card.ctaLabel}</button>
       ) : null}
     </div>
   );
