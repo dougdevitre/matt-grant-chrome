@@ -3,6 +3,7 @@
 // team can watch the coordinated push climb. O(n) over posts; fine at campaign
 // scale. Counts only, no PII (mirrors lib/gotv.ts).
 
+import { currentPhase } from "../phase.js";
 import { getStore } from "./store.js";
 import type {
   SharePlatform,
@@ -26,7 +27,7 @@ function progressFor(blast: SocialBlast, posts: SocialPost[]): SocialBlastProgre
   };
 }
 
-export async function socialDashboard(): Promise<SocialDashboard> {
+export async function socialDashboard(now: Date = new Date()): Promise<SocialDashboard> {
   const store = await getStore();
   // Approved posts are the amplifiable set; drafts don't count toward totals.
   const posts = await store.listSocialPosts({ status: "approved" });
@@ -38,8 +39,19 @@ export async function socialDashboard(): Promise<SocialDashboard> {
     .map((b) => progressFor(b, posts))
     .sort((a, b) => b.shares - a.shares);
 
-  // The single blast to feature: the active one with the most shares, if any.
-  const activeBlast = byBlast.find((b) => b.status === "active") ?? null;
+  // The single blast to feature: the active one with the most shares whose
+  // phases still cover the current phase. A "Register by Jul 8" blast left
+  // active after the deadline must not stay on everyone's Share tab; blasts
+  // with no phases are treated as evergreen. byBlast keeps every blast so the
+  // team can still see (and close out) stale ones.
+  const phase = currentPhase(now);
+  const relevantIds = new Set(
+    blasts
+      .filter((b) => b.phases.length === 0 || b.phases.includes(phase))
+      .map((b) => b.id)
+  );
+  const activeBlast =
+    byBlast.find((b) => b.status === "active" && relevantIds.has(b.blastId)) ?? null;
 
   const platformCounts = new Map<SharePlatform, number>();
   for (const p of posts) {

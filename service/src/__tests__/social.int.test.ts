@@ -141,6 +141,24 @@ describe("draft → approve → share lifecycle", () => {
       (await request(app).post(`/social/posts/${id}/approve`).set("Authorization", voter())).status
     ).toBe(403);
   });
+
+  it("rate-limits share self-reports per clerk", async () => {
+    // Distinct sub so the shared counter doesn't bleed into other tests
+    // (the counter is process-wide and not reset with the store).
+    const spammer = () => bearer(tokenFor("voter_contact_clerk", "share-spammer"));
+    const posts = await request(app).get("/social/posts").set("Authorization", voter());
+    const postId = posts.body[0].id;
+    let status = 0;
+    for (let i = 0; i < 31; i++) {
+      status = (
+        await request(app)
+          .post(`/social/posts/${postId}/shared`)
+          .set("Authorization", spammer())
+          .send({})
+      ).status;
+    }
+    expect(status).toBe(429);
+  });
 });
 
 describe("blasts + GET /dashboard/social", () => {
