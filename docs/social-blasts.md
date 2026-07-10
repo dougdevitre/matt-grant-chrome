@@ -25,21 +25,26 @@ sharing, the same posture as the GOTV follow-up sender.
 No OAuth, no API tokens, no secrets — opening a composer is just a new browser
 tab, and copy uses the clipboard.
 
-## Blast calendar (seeded)
+## Blast calendar
 
-A **blast** is a coordinated wave of posts tied to the phase clock. The default
-seed matches the MO-02 election clock:
+A **blast** is a coordinated wave of posts tied to the phase clock. Two blasts
+are seeded out of the box (dev/memory store):
 
-| Blast | Phase / window | Theme | Link |
-|---|---|---|---|
-| Register by Jul 8 | `PHASE_1_REGISTER` → Jul 8 | Deadline urgency (no same-day reg) | SOS register |
-| Make your plan | `PHASE_2_PLAN` (Jul 9–20) | Confirm reg + plan to vote | SOS status |
-| Early vote | `PHASE_3_TURNOUT` (Jul 21–Aug 4) | Early / absentee options | Polling place |
-| Aug 4 turnout | `PHASE_3_TURNOUT` final days | Election-day push | Polling place |
-| Chip in for MO-02 | evergreen (all active phases) | Grassroots fundraising (WinRed) | `DONATE_URL` |
+| Blast | Phase / window | Theme | Link | Seeded |
+|---|---|---|---|---|
+| Register by Jul 8 | `PHASE_1_REGISTER` → Jul 8 | Deadline urgency (no same-day reg) | SOS register | ✔ |
+| Chip in for MO-02 | evergreen (all active phases) | Grassroots fundraising (WinRed) | `DONATE_URL` | ✔ |
+| Make your plan | `PHASE_2_PLAN` (Jul 9–20) | Confirm reg + plan to vote | SOS status | create it |
+| Early vote / Aug 4 turnout | `PHASE_3_TURNOUT` (Jul 21–Aug 4) | Early options, election-day push | Polling place | create it |
 
 Create or reschedule blasts from the Share tab (`comms.draft`); advance a blast
 `scheduled → active → done` with `comms.approve`.
+
+Phase relevance is enforced on the read side: the Share tab lists only posts
+whose `phases` include the current phase, and the dashboard features only an
+active blast that is still phase-relevant — a "Register by Jul 8" blast left
+active after the deadline drops off everyone's Share tab automatically (it
+stays in the full blast list so the team can mark it done).
 
 ## Donations (WinRed)
 
@@ -52,7 +57,10 @@ committee WinRed slug before launch.**
 ## Compliance (educational, not legal advice)
 
 - Every shareable post carries the FEC **"Paid for by `COMMITTEE_NAME`"**
-  disclaimer, and approval is blocked without it.
+  disclaimer, and approval is blocked without it. The attribution is appended to
+  the text volunteers actually copy or send to a composer (unless the body
+  already inlines it), so the published post carries it too — not just the card
+  in the side panel.
 - Donation asks must not solicit contributions from foreign nationals and should
   carry the committee disclaimer. Genuinely personal, uncompensated volunteer
   speech has a narrower FEC disclaimer exemption, but campaign-supplied
@@ -67,7 +75,7 @@ committee WinRed slug before launch.**
 | POST | `/social/generate` | `comms.draft` | unsaved generated draft suggestion |
 | POST | `/social/posts` | `comms.draft` | save a draft |
 | POST | `/social/posts/:id/approve` | `comms.approve` | approve/reject (disclaimer gate) |
-| POST | `/social/posts/:id/shared` | any clerk | self-report a share (audited) |
+| POST | `/social/posts/:id/shared` | any clerk | self-report a share (audited, rate-limited per clerk) |
 | GET | `/social/blasts?status=` | any clerk | list blasts |
 | POST | `/social/blasts` | `comms.draft` | schedule a blast |
 | POST | `/social/blasts/:id/status` | `comms.approve` | advance a blast's status |

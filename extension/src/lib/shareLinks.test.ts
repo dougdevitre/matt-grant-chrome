@@ -40,6 +40,20 @@ describe("buildShareUrl", () => {
     const url = buildShareUrl("x", { ...content, url: null })!;
     expect(url).not.toContain("url=");
   });
+
+  it("falls back to copy (null) for Facebook/LinkedIn when there is no link", () => {
+    // Both intents are URL-based; without a link they'd open a broken sharer.
+    expect(buildShareUrl("facebook", { ...content, url: null })).toBeNull();
+    expect(buildShareUrl("linkedin", { ...content, url: null })).toBeNull();
+  });
+
+  it("includes the disclaimer in the X intent text", () => {
+    const url = buildShareUrl("x", {
+      ...content,
+      disclaimer: "Paid for by Matt Grant for Congress.",
+    })!;
+    expect(url).toContain(encodeURIComponent("Paid for by Matt Grant for Congress."));
+  });
 });
 
 describe("composeShareText", () => {
@@ -53,6 +67,23 @@ describe("composeShareText", () => {
   it("skips an empty link cleanly", () => {
     const text = composeShareText({ ...content, url: null });
     expect(text.endsWith("#MO02 #VoteAug4")).toBe(true);
+  });
+
+  it("appends the disclaimer so the published post carries the attribution", () => {
+    const text = composeShareText({
+      ...content,
+      disclaimer: "Paid for by Matt Grant for Congress.",
+    });
+    expect(text.endsWith("Paid for by Matt Grant for Congress.")).toBe(true);
+  });
+
+  it("does not duplicate an attribution already inlined in the body", () => {
+    const text = composeShareText({
+      ...content,
+      text: "Chip in! Paid for by Matt Grant for Congress.",
+      disclaimer: "Paid for by Matt Grant for Congress.",
+    });
+    expect(text.match(/paid for by/gi)?.length).toBe(1);
   });
 });
 

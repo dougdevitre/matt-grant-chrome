@@ -16,6 +16,7 @@ import {
 import { getGenerator } from "../lib/socialGen.js";
 import { getStore } from "../lib/store.js";
 import { pathParam, queryStr } from "../lib/http.js";
+import { rateAllow } from "../lib/ratelimit.js";
 import type {
   BlastStatus,
   Phase,
@@ -146,7 +147,14 @@ socialRouter.post("/posts/:id/approve", requireScope("comms.approve"), async (re
 });
 
 // POST /social/posts/:id/shared  { platform? } — any signed-in clerk amplifies.
+// Per-clerk rate limit (mirrors the SMS send limit): shares are self-reported
+// and feed the dashboard totals, so one clerk hammering the endpoint must not
+// be able to inflate blast progress.
 socialRouter.post("/posts/:id/shared", async (req, res) => {
+  if (!(await rateAllow(`social_share:${req.clerk!.clerkId}`, 30, 60_000))) {
+    res.status(429).json({ error: "rate_limited" });
+    return;
+  }
   const platform = req.body?.platform;
   const result = await markShared(
     pathParam(req, "id"),
