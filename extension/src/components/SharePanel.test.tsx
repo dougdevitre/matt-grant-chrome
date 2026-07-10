@@ -95,6 +95,16 @@ describe("SharePanel", () => {
     expect(await within(card as HTMLElement).findByText("1 shares")).toBeInTheDocument();
   });
 
+  it("requests only posts for the current phase — no fetch-everything fallback", async () => {
+    vi.mocked(api.socialPosts).mockResolvedValue([] as never);
+    render(<SharePanel me={volunteer} phase={"PHASE_2_PLAN" as never} />);
+    expect(
+      await screen.findByText("No approved posts for this phase yet.")
+    ).toBeInTheDocument();
+    expect(api.socialPosts).toHaveBeenCalledWith({ phase: "PHASE_2_PLAN" });
+    expect(api.socialPosts).toHaveBeenCalledTimes(1);
+  });
+
   it("hides authoring + approval sections from a non-comms role", async () => {
     render(<SharePanel me={volunteer} phase={null} />);
     await screen.findByText("Share to your channels");

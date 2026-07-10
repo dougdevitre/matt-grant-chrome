@@ -59,7 +59,12 @@ function ShareCard({
   const [note, setNote] = useState<string | null>(null);
 
   const text = variantFor(post.variants, platform);
-  const content = { text, url: post.linkUrl, hashtags: post.hashtags };
+  const content = {
+    text,
+    url: post.linkUrl,
+    hashtags: post.hashtags,
+    disclaimer: post.disclaimer,
+  };
   const fullText = composeShareText(content);
 
   async function onCopy() {
@@ -314,13 +319,10 @@ export function SharePanel({ me, phase }: { me: ClerkIdentity; phase: Phase | nu
   const load = useCallback(async () => {
     setError(null);
     try {
-      // Relevant-to-now first: filter by the current active phase. Fall back to
-      // all approved posts if that yields nothing (e.g. between phases).
-      let approved = await api.socialPosts(
-        phase && phase !== "PHASE_CLOSED" ? { phase } : {}
-      );
-      if (approved.length === 0 && phase) approved = await api.socialPosts({});
-      setPosts(approved);
+      // Only posts relevant to the current phase: a "Register by Jul 8" post
+      // must not resurface after the deadline just because nothing newer is
+      // approved yet. Unfiltered only when the phase is unknown.
+      setPosts(await api.socialPosts(phase ? { phase } : {}));
       setDash(await api.socialDashboard());
       if (has("comms.approve")) {
         setPending(await api.socialPosts({ status: "draft" }));
@@ -393,7 +395,7 @@ export function SharePanel({ me, phase }: { me: ClerkIdentity; phase: Phase | nu
         {!posts ? (
           <p className="note">Loading posts…</p>
         ) : posts.length === 0 ? (
-          <p className="note">No approved posts yet.</p>
+          <p className="note">No approved posts for this phase yet.</p>
         ) : (
           posts.map((p) => <ShareCard key={p.id} post={p} onShared={bumpShare} />)
         )}

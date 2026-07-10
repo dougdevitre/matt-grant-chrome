@@ -12,12 +12,23 @@ export interface ShareContent {
   text: string;
   url: string | null;
   hashtags: string[];
+  /** "Paid for by …" attribution — appended to the shared text so the post a
+   * volunteer actually publishes carries it (compliance approved it for a
+   * reason). Omitted when the body already inlines its own attribution. */
+  disclaimer?: string | null;
 }
 
-/** The full text a "Copy" action puts on the clipboard: body + hashtags + link. */
+function disclaimerLine(content: ShareContent): string {
+  if (!content.disclaimer || /paid for by/i.test(content.text)) return "";
+  return content.disclaimer;
+}
+
+/** The full text a "Copy" action puts on the clipboard: body + hashtags + link + disclaimer. */
 export function composeShareText(content: ShareContent): string {
   const tags = content.hashtags.join(" ");
-  return [content.text, tags, content.url ?? ""].filter(Boolean).join("\n\n");
+  return [content.text, tags, content.url ?? "", disclaimerLine(content)]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 /**
@@ -30,7 +41,7 @@ export function buildShareUrl(
   content: ShareContent
 ): string | null {
   const url = content.url ?? "";
-  const textWithTags = [content.text, content.hashtags.join(" ")]
+  const textWithTags = [content.text, content.hashtags.join(" "), disclaimerLine(content)]
     .filter(Boolean)
     .join(" ");
   switch (platform) {
@@ -39,11 +50,16 @@ export function buildShareUrl(
         textWithTags
       )}${url ? `&url=${encodeURIComponent(url)}` : ""}`;
     case "facebook":
-      // Facebook prefills the URL reliably; quote is best-effort.
+      // Facebook's sharer is URL-based — without a link there is nothing to
+      // share, so fall back to clipboard copy. It prefills the URL reliably;
+      // quote is best-effort.
+      if (!url) return null;
       return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
         url
       )}&quote=${encodeURIComponent(textWithTags)}`;
     case "linkedin":
+      // Same: share-offsite requires a URL.
+      if (!url) return null;
       return `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(
         url
       )}`;
